@@ -1,0 +1,45 @@
+{
+  "COMMON": {
+    "WELCOME": "Welcome to OrthoFlow",
+    "DASHBOARD": "Dashboard",
+    "OVERVIEW": "Overview",
+    "PATIENTS": "Patients",
+    "SCHEDULE": "Schedule",
+    "BILLING": "Billing",
+    "ANALYTICS": "Analytics",
+    "SETTINGS": "Settings",
+    "LOGOUT": "Logout",
+    "LOCALIZATION": "Localization",
+    "LANGUAGE": "Language"
+  },
+  "AUTH": {
+    "LOGIN": "Login",
+    "EMAIL": "Email",
+    "PASSWORD": "Password"
+  },
+  "DENTAL_CHART": {
+    "ADULT_TITLE": "Adult Dentition",
+    "CHILD_TITLE": "Child Dentition",
+    "HOVER_PROMPT": "Hover over a tooth to inspect",
+    "TOOTH_NUMBER": "Tooth #",
+    "RESET_PRESENT": "Reset to Present",
+    "COPY_STATE": "Copy state string",
+    "STATE_COPIED": "Dental chart state string copied to clipboard!",
+    "STATUS": {
+      "EXTRACTED": "Extracted",
+      "COMPOSITE": "Composite",
+      "AMALGAM": "Amalgam",
+      "CROWN": "Crown",
+      "BRIDGE": "Bridge",
+      "IMPLANT": "Implant",
+      "VENEER": "Veneer",
+      "ROOT_CANAL": "Root Canal",
+      "CARIES": "Caries",
+      "FRACTURE": "Fracture",
+      "IMPACTED": "Impacted",
+      "MISSING": "Missing",
+      "POST": "Post/Nail",
+      "PRESENT": "Present"
+    }
+  }
+}

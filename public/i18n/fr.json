@@ -1,0 +1,45 @@
+{
+  "COMMON": {
+    "WELCOME": "Bienvenue sur OrthoFlow",
+    "DASHBOARD": "Tableau de bord",
+    "OVERVIEW": "Vue d'ensemble",
+    "PATIENTS": "Patients",
+    "SCHEDULE": "Agenda",
+    "BILLING": "Facturation",
+    "ANALYTICS": "Analytique",
+    "SETTINGS": "Paramètres",
+    "LOGOUT": "Déconnexion",
+    "LOCALIZATION": "Localisation",
+    "LANGUAGE": "Langue"
+  },
+  "AUTH": {
+    "LOGIN": "Connexion",
+    "EMAIL": "Email",
+    "PASSWORD": "Mot de passe"
+  },
+  "DENTAL_CHART": {
+    "ADULT_TITLE": "Dentition Adulte",
+    "CHILD_TITLE": "Dentition Enfant",
+    "HOVER_PROMPT": "Survolez une dent pour l'inspecter",
+    "TOOTH_NUMBER": "Dent n°",
+    "RESET_PRESENT": "Réinitialiser (Présente)",
+    "COPY_STATE": "Copier l'état",
+    "STATE_COPIED": "État du schéma dentaire copié !",
+    "STATUS": {
+      "EXTRACTED": "Extraite",
+      "COMPOSITE": "Composite",
+      "AMALGAM": "Amalgame",
+      "CROWN": "Couronne",
+      "BRIDGE": "Bridge",
+      "IMPLANT": "Implant",
+      "VENEER": "Facette",
+      "ROOT_CANAL": "Dévitalisée",
+      "CARIES": "Carie",
+      "FRACTURE": "Fracture",
+      "IMPACTED": "Incluse",
+      "MISSING": "Absente",
+      "POST": "Pivot/Tenon",
+      "PRESENT": "Présente"
+    }
+  }
+}

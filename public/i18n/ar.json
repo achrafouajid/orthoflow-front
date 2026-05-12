@@ -1,0 +1,20 @@
+{
+  "COMMON": {
+    "WELCOME": "مرحباً بكم في OrthoFlow",
+    "DASHBOARD": "لوحة القيادة",
+    "OVERVIEW": "نظرة عامة",
+    "PATIENTS": "المرضى",
+    "SCHEDULE": "الجدول الزمني",
+    "BILLING": "الفواتير",
+    "ANALYTICS": "التحليلات",
+    "SETTINGS": "الإعدادات",
+    "LOGOUT": "تسجيل الخروج",
+    "LOCALIZATION": "التعريب",
+    "LANGUAGE": "اللغة"
+  },
+  "AUTH": {
+    "LOGIN": "تسجيل الدخول",
+    "EMAIL": "البريد الإلكتروني",
+    "PASSWORD": "كلمة المرور"
+  }
+}

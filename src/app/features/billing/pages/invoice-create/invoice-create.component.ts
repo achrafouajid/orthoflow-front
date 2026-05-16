@@ -1,10 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { InvoiceService } from '../../services/invoice.service';
 import { PatientService } from '../../../../core/services/patient.service';
-import { InvoiceLine } from '../../models/billing.model';
+import { InvoiceLine, Invoice } from '../../models/billing.model';
+import { OnInit } from '@angular/core';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-invoice-create',
@@ -316,16 +318,29 @@ import { InvoiceLine } from '../../models/billing.model';
     }
   `]
 })
-export class InvoiceCreateComponent {
+export class InvoiceCreateComponent implements OnInit {
   invoiceService = inject(InvoiceService);
   patientService = inject(PatientService);
   router = inject(Router);
+  route = inject(ActivatedRoute);
 
   selectedPatientId = '';
+  treatmentPlanId = '';
   notes = '';
   lines = signal<InvoiceLine[]>([
-    { label: '', quantity: 1, unitPrice: 0, discountPct: 0, lineTotal: 0, sortOrder: 0 }
+    { label: 'Orthodontic Treatment - Monthly Fee', quantity: 1, unitPrice: 1500, discountPct: 0, lineTotal: 1500, sortOrder: 0 }
   ]);
+
+  loading = signal(false);
+
+  ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['patientId']) {
+        this.selectedPatientId = params['patientId'];
+      }
+    });
+    this.calculateTotal();
+  }
 
   subtotal = signal(0);
   discountAmount = signal(0);
@@ -368,35 +383,43 @@ export class InvoiceCreateComponent {
     this.total.set(sub - disc);
   }
 
-  async saveInvoice(status: any) {
+  saveInvoice(status: any) {
     if (!this.selectedPatientId) {
       alert('Please select a patient');
       return;
     }
 
     const patient = this.patientService.patients().find(p => p.id === this.selectedPatientId);
+    
+    this.loading.set(true);
+    const invoiceData: Partial<Invoice> = {
+      practiceId: '00000000-0000-0000-0000-000000000001', // Mock practice ID
+      patientId: this.selectedPatientId,
+      treatmentPlanId: this.treatmentPlanId || undefined,
+      status: status,
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      currency: 'MAD',
+      subtotal: this.subtotal(),
+      taxAmount: 0,
+      discountAmount: this.discountAmount(),
+      total: this.total(),
+      regionCode: 'MA',
+      notes: this.notes,
+      lines: this.lines(),
+      invoiceNumber: `INV-${Date.now().toString().slice(-6)}` // Fallback number generation
+    };
 
-    try {
-      await this.invoiceService.createInvoice({
-        practiceId: 'prac-1',
-        patientId: this.selectedPatientId,
-        patientName: `${patient?.firstName} ${patient?.lastName}`,
-        status: status,
-        issueDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        currency: 'MAD',
-        subtotal: this.subtotal(),
-        taxAmount: 0,
-        discountAmount: this.discountAmount(),
-        total: this.total(),
-        regionCode: 'MA',
-        notes: this.notes,
-        lines: this.lines()
+    this.invoiceService.createInvoice(invoiceData)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: () => {
+          this.router.navigate(['/billing/invoices']);
+        },
+        error: (err) => {
+          console.error('Failed to create invoice', err);
+          alert('Failed to create invoice. Check console for details.');
+        }
       });
-
-      this.router.navigate(['/billing/invoices']);
-    } catch (error) {
-      alert('Failed to create invoice');
-    }
   }
 }

@@ -6,7 +6,7 @@ import { InvoiceService } from '../../services/invoice.service';
 @Component({
   selector: 'app-quote-list',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule],
   template: `
     <div class="billing-container">
       <header class="page-header">
@@ -14,12 +14,14 @@ import { InvoiceService } from '../../services/invoice.service';
           <button class="back-btn" routerLink="/billing/invoices">
             <span class="material-icons">arrow_back</span>
           </button>
-          <h1>Quotes (Devis)</h1>
-          <p>Manage patient treatment quotes</p>
+          <div class="title-meta">
+            <h1>{{ 'BILLING.QUOTES_TITLE' | translate }}</h1>
+            <p>{{ 'BILLING.QUOTES_SUBTITLE' | translate }}</p>
+          </div>
         </div>
         <button class="btn-primary">
           <span class="material-icons">add</span>
-          New Quote
+          {{ 'BILLING.NEW_QUOTE' | translate }}
         </button>
       </header>
 
@@ -27,13 +29,13 @@ import { InvoiceService } from '../../services/invoice.service';
         <table class="billing-table">
           <thead>
             <tr>
-              <th>Quote #</th>
-              <th>Patient</th>
-              <th>Status</th>
-              <th>Issue Date</th>
-              <th>Expiry Date</th>
-              <th>Amount</th>
-              <th>Actions</th>
+              <th>{{ 'BILLING.QUOTE_NUMBER' | translate }}</th>
+              <th>{{ 'PATIENTS.NAME' | translate }}</th>
+              <th>{{ 'COMMON.STATUS' | translate }}</th>
+              <th>{{ 'BILLING.ISSUE_DATE' | translate }}</th>
+              <th>{{ 'BILLING.EXPIRY_DATE' | translate }}</th>
+              <th>{{ 'COMMON.AMOUNT' | translate }}</th>
+              <th>{{ 'COMMON.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -43,18 +45,18 @@ import { InvoiceService } from '../../services/invoice.service';
                 <td>{{ quote.patientName }}</td>
                 <td>
                   <span class="status-badge" [class]="quote.status.toLowerCase()">
-                    {{ quote.status }}
+                     {{ 'BILLING.STATUS.' + quote.status | translate }}
                   </span>
                 </td>
-                <td>{{ quote.issueDate | date }}</td>
-                <td>{{ quote.expiryDate | date }}</td>
+                <td>{{ quote.issueDate | date:'mediumDate' }}</td>
+                <td>{{ quote.expiryDate | date:'mediumDate' }}</td>
                 <td><span class="amount">{{ quote.total | number:'1.2-2' }} {{ quote.currency }}</span></td>
                 <td>
                   <div class="row-actions">
-                    <button class="icon-btn" title="Accept & Convert">
+                    <button class="icon-btn" [title]="'BILLING.ACCEPT_CONVERT' | translate">
                       <span class="material-icons">check_circle</span>
                     </button>
-                    <button class="icon-btn" title="Download PDF">
+                    <button class="icon-btn" [title]="'BILLING.DOWNLOAD_PDF' | translate">
                       <span class="material-icons">download</span>
                     </button>
                   </div>

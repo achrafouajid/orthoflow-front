@@ -2,33 +2,34 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { PatientService } from '../../../core/services/patient.service';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-patient-list',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule],
   template: `
     <div class="patient-list-container">
       <header class="page-header">
         <div class="header-content">
-          <h1>Patients</h1>
-          <p>Manage your patient dossiers and treatment plans</p>
+          <h1>{{ 'PATIENTS.TITLE' | translate }}</h1>
+          <p>{{ 'PATIENTS.SUBTITLE' | translate }}</p>
         </div>
         <button class="btn-primary" routerLink="register">
           <span class="material-icons">add</span>
-          New Patient
+          {{ 'COMMON.ADD' | translate }} {{ 'PATIENTS.NAME' | translate }}
         </button>
       </header>
 
       <div class="filters-bar">
         <div class="search-input">
           <span class="material-icons">search</span>
-          <input type="text" placeholder="Search by name, ID or phone..." />
+          <input type="text" [placeholder]="'COMMON.SEARCH' | translate" />
         </div>
         <div class="filters-actions">
           <button class="btn-secondary">
             <span class="material-icons">filter_list</span>
-            Filters
+            {{ 'COMMON.FILTER' | translate }}
           </button>
         </div>
       </div>
@@ -37,11 +38,11 @@ import { PatientService } from '../../../core/services/patient.service';
         <table class="patients-table">
           <thead>
             <tr>
-              <th>Patient</th>
-              <th>Status</th>
-              <th>Next Appointment</th>
-              <th>Contact</th>
-              <th>Actions</th>
+              <th>{{ 'PATIENTS.NAME' | translate }}</th>
+              <th>{{ 'COMMON.STATUS' | translate }}</th>
+              <th>{{ 'PATIENTS.NEXT_APPOINTMENT' | translate }}</th>
+              <th>{{ 'PATIENTS.CONTACT' | translate }}</th>
+              <th>{{ 'COMMON.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -77,10 +78,10 @@ import { PatientService } from '../../../core/services/patient.service';
                 </td>
                 <td>
                   <div class="row-actions">
-                    <button class="icon-btn" title="View Dossier">
+                    <button class="icon-btn" [title]="'COMMON.VIEW' | translate">
                       <span class="material-icons">visibility</span>
                     </button>
-                    <button class="icon-btn" title="Edit">
+                    <button class="icon-btn" [title]="'COMMON.EDIT' | translate" [routerLink]="[patient.id, 'edit']" (click)="$event.stopPropagation()">
                       <span class="material-icons">edit</span>
                     </button>
                   </div>

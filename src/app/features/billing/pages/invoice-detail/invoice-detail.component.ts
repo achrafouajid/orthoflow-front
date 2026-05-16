@@ -4,11 +4,12 @@ import { RouterModule, ActivatedRoute } from '@angular/router';
 import { InvoiceService } from '../../services/invoice.service';
 import { Invoice, Payment } from '../../models/billing.model';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-invoice-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
   template: `
     @if (invoice(); as inv) {
       <div class="invoice-detail-container">
@@ -18,9 +19,9 @@ import { FormsModule } from '@angular/forms';
               <span class="material-icons">arrow_back</span>
             </button>
             <div class="title-with-status">
-              <h1>Invoice {{ inv.invoiceNumber }}</h1>
+              <h1>{{ 'BILLING.INVOICE_NUMBER' | translate }} {{ inv.invoiceNumber }}</h1>
               <span class="status-badge" [class]="inv.status.toLowerCase().replace('_', '-')">
-                {{ inv.status.replace('_', ' ') }}
+                {{ 'BILLING.STATUS.' + inv.status | translate }}
               </span>
             </div>
           </div>
@@ -49,7 +50,7 @@ import { FormsModule } from '@angular/forms';
                 <div class="info-group">
                   <label>Bill To</label>
                   <span class="info-value">{{ inv.patientName }}</span>
-                  <span class="info-sub">Patient ID: {{ inv.patientId }}</span>
+                  <span class="info-sub">{{ 'PATIENTS.NAME' | translate }} ID: {{ inv.patientId }}</span>
                 </div>
                 <div class="info-group">
                   <label>Practice</label>
@@ -57,11 +58,11 @@ import { FormsModule } from '@angular/forms';
                   <span class="info-sub">Casablanca, Morocco</span>
                 </div>
                 <div class="info-group">
-                  <label>Issue Date</label>
+                  <label>{{ 'BILLING.ISSUE_DATE' | translate }}</label>
                   <span class="info-value">{{ inv.issueDate | date:'longDate' }}</span>
                 </div>
                 <div class="info-group">
-                  <label>Due Date</label>
+                  <label>{{ 'BILLING.EXPIRY_DATE' | translate }}</label>
                   <span class="info-value">{{ inv.dueDate | date:'longDate' }}</span>
                 </div>
               </div>
@@ -78,7 +79,7 @@ import { FormsModule } from '@angular/forms';
                     <th class="text-right">Qty</th>
                     <th class="text-right">Unit Price</th>
                     <th class="text-right">Discount</th>
-                    <th class="text-right">Total</th>
+                    <th class="text-right">{{ 'COMMON.TOTAL' | translate }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -107,7 +108,7 @@ import { FormsModule } from '@angular/forms';
                   <span>{{ inv.taxAmount | number:'1.2-2' }} {{ inv.currency }}</span>
                 </div>
                 <div class="total-row grand-total">
-                  <span>Total</span>
+                  <span>{{ 'COMMON.TOTAL' | translate }}</span>
                   <span>{{ inv.total | number:'1.2-2' }} {{ inv.currency }}</span>
                 </div>
               </div>
@@ -115,7 +116,7 @@ import { FormsModule } from '@angular/forms';
 
             <div class="card payments-card">
               <div class="card-header">
-                <h3>Payment History</h3>
+                <h3>{{ 'BILLING.PAYMENT_HISTORY' | translate }}</h3>
               </div>
               <div class="card-body">
                 @if (inv.payments && inv.payments.length > 0) {
@@ -130,7 +131,7 @@ import { FormsModule } from '@angular/forms';
                         <div class="payment-details">
                           <div class="payment-main">
                             <span class="payment-amount">{{ payment.amount | number:'1.2-2' }} {{ inv.currency }}</span>
-                            <span class="payment-method">{{ payment.method }}</span>
+                            <span class="payment-method">{{ 'BILLING.METHODS.' + payment.method | translate }}</span>
                           </div>
                           <div class="payment-meta">
                             <span>{{ payment.paymentDate | date:'mediumDate' }}</span>
@@ -142,7 +143,7 @@ import { FormsModule } from '@angular/forms';
                     }
                   </div>
                 } @else {
-                  <p class="empty-msg">No payments recorded yet.</p>
+                  <p class="empty-msg">{{ 'BILLING.NO_PAYMENTS' | translate }}</p>
                 }
               </div>
             </div>
@@ -151,7 +152,7 @@ import { FormsModule } from '@angular/forms';
           <div class="sidebar">
             <div class="card balance-card">
               <div class="balance-content">
-                <span class="balance-label">Remaining Balance</span>
+                <span class="balance-label">{{ 'BILLING.REMAINING_BALANCE' | translate }}</span>
                 <span class="balance-value" [class.paid]="remainingBalance() === 0">
                   {{ remainingBalance() | number:'1.2-2' }} {{ inv.currency }}
                 </span>
@@ -159,7 +160,7 @@ import { FormsModule } from '@angular/forms';
               @if (remainingBalance() > 0) {
                 <button class="btn-primary full-width" (click)="showPaymentForm.set(true)">
                   <span class="material-icons">add</span>
-                  Record Payment
+                  {{ 'BILLING.RECORD_PAYMENT' | translate }}
                 </button>
               }
             </div>
@@ -167,31 +168,31 @@ import { FormsModule } from '@angular/forms';
             @if (showPaymentForm()) {
               <div class="card payment-form-card">
                 <div class="card-header">
-                  <h3>Record Payment</h3>
+                  <h3>{{ 'BILLING.RECORD_PAYMENT' | translate }}</h3>
                   <button class="icon-btn" (click)="showPaymentForm.set(false)">
                     <span class="material-icons">close</span>
                   </button>
                 </div>
                 <div class="card-body">
                   <div class="form-group">
-                    <label>Amount</label>
+                    <label>{{ 'COMMON.AMOUNT' | translate }}</label>
                     <input type="number" [(ngModel)]="paymentAmount" class="form-control">
                   </div>
                   <div class="form-group">
-                    <label>Method</label>
+                    <label>{{ 'BILLING.METHOD' | translate }}</label>
                     <select [(ngModel)]="paymentMethod" class="form-control">
-                      <option value="CASH">Cash</option>
-                      <option value="CARD">Card</option>
-                      <option value="BANK_TRANSFER">Bank Transfer</option>
-                      <option value="CHEQUE">Cheque</option>
+                      <option value="CASH">{{ 'BILLING.METHODS.CASH' | translate }}</option>
+                      <option value="CARD">{{ 'BILLING.METHODS.CARD' | translate }}</option>
+                      <option value="BANK_TRANSFER">{{ 'BILLING.METHODS.BANK_TRANSFER' | translate }}</option>
+                      <option value="CHEQUE">{{ 'BILLING.METHODS.CHEQUE' | translate }}</option>
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Reference #</label>
-                    <input type="text" [(ngModel)]="paymentRef" class="form-control" placeholder="Optional">
+                    <label>{{ 'BILLING.REFERENCE' | translate }}</label>
+                    <input type="text" [(ngModel)]="paymentRef" class="form-control" [placeholder]="'COMMON.OPTIONAL' | translate">
                   </div>
                   <button class="btn-primary full-width mt-4" (click)="recordPayment()">
-                    Submit Payment
+                    {{ 'COMMON.SUBMIT' | translate }}
                   </button>
                 </div>
               </div>
@@ -200,7 +201,7 @@ import { FormsModule } from '@angular/forms';
         </div>
       </div>
     } @else {
-      <div class="loading">Loading invoice...</div>
+      <div class="loading">{{ 'BILLING.LOADING_INVOICE' | translate }}</div>
     }
   `,
   styles: [`
@@ -489,11 +490,10 @@ export class InvoiceDetailComponent implements OnInit {
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      const inv = this.invoiceService.getInvoice(id);
-      if (inv) {
+      this.invoiceService.getInvoice(id).subscribe(inv => {
         this.invoice.set(inv);
         this.calculateBalance();
-      }
+      });
     }
   }
 
@@ -506,25 +506,30 @@ export class InvoiceDetailComponent implements OnInit {
     }
   }
 
-  async recordPayment() {
+  recordPayment() {
     const inv = this.invoice();
     if (inv) {
-      try {
-        await this.invoiceService.recordPayment(inv.id, {
-          amount: this.paymentAmount,
-          method: this.paymentMethod,
-          paymentDate: new Date().toISOString().split('T')[0],
-          reference: this.paymentRef
-        });
-        
-        // Refresh local state
-        const updatedInv = await this.invoiceService.getInvoice(inv.id);
-        this.invoice.set(updatedInv || null);
-        this.calculateBalance();
-        this.showPaymentForm.set(false);
-      } catch (error) {
-        alert('Failed to record payment');
-      }
+      const paymentData = {
+        amount: this.paymentAmount,
+        method: this.paymentMethod,
+        paymentDate: new Date().toISOString().split('T')[0],
+        reference: this.paymentRef
+      };
+
+      this.invoiceService.recordPayment(inv.id, paymentData).subscribe({
+        next: () => {
+          // Refresh local state
+          this.invoiceService.getInvoice(inv.id).subscribe(updatedInv => {
+            this.invoice.set(updatedInv);
+            this.calculateBalance();
+            this.showPaymentForm.set(false);
+          });
+        },
+        error: (err) => {
+          console.error('Failed to record payment', err);
+          alert('Failed to record payment');
+        }
+      });
     }
   }
 }

@@ -1,15 +1,18 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { PatientService } from '../../../core/services/patient.service';
 import { DentalChartService } from '../../../core/services/dental-chart.service';
 import { Patient, DentalChartState, DentalChartType, ToothState } from '../../../core/models/patient.model';
 import { DentalChartComponent } from '../../dental-chart/dental-chart.component';
+import { InvoiceService } from '../../billing/services/invoice.service';
+import { Invoice } from '../../billing/models/billing.model';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-patient-dossier',
   standalone: true,
-  imports: [CommonModule, RouterModule, DentalChartComponent],
+  imports: [CommonModule, RouterModule, DentalChartComponent, TranslateModule],
   template: `
     <div class="dossier-container">
       @if (patientService.currentPatient(); as patient) {
@@ -21,44 +24,48 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
           </button>
           <div class="patient-title">
             <h1>{{ patient.firstName }} {{ patient.lastName }}</h1>
-            <span class="status-badge active">{{ patient.status }}</span>
+            <span class="status-badge active">{{ 'PATIENTS.DOSSIER.STATUS_' + patient.status | translate }}</span>
           </div>
           <div class="header-actions">
             <button class="btn-outline">
               <span class="material-icons">print</span>
-              Print Report
+              {{ 'COMMON.PRINT' | translate }}
             </button>
-            <button class="btn-primary">
+            <button class="btn-primary" [routerLink]="['edit']">
               <span class="material-icons">edit</span>
-              Edit Patient
+              {{ 'COMMON.EDIT' | translate }} {{ 'PATIENTS.NAME' | translate }}
+            </button>
+            <button class="btn-danger" (click)="onDelete()">
+              <span class="material-icons">delete</span>
+              {{ 'COMMON.DELETE' | translate }}
             </button>
           </div>
         </div>
 
         <div class="patient-quick-info">
           <div class="info-item">
-            <span class="label">Age</span>
-            <span class="value">{{ calculateAge(patient.dateOfBirth) }} yrs</span>
+            <span class="label">{{ 'PATIENTS.DOSSIER.AGE' | translate }}</span>
+            <span class="value">{{ calculateAge(patient.dateOfBirth) }} {{ 'PATIENTS.DOSSIER.YEARS' | translate }}</span>
           </div>
           <div class="info-divider"></div>
           <div class="info-item">
-            <span class="label">Gender</span>
-            <span class="value">{{ patient.gender === 'M' ? 'Male' : 'Female' }}</span>
+            <span class="label">{{ 'PATIENTS.DOSSIER.GENDER' | translate }}</span>
+            <span class="value">{{ 'PATIENTS.DOSSIER.GENDER_' + patient.gender | translate }}</span>
           </div>
           <div class="info-divider"></div>
           <div class="info-item">
-            <span class="label">Phone</span>
+            <span class="label">{{ 'PATIENTS.DOSSIER.PHONE' | translate }}</span>
             <span class="value">{{ patient.phone }}</span>
           </div>
           <div class="info-divider"></div>
           <div class="info-item">
-            <span class="label">CIN</span>
+            <span class="label">{{ 'PATIENTS.DOSSIER.CIN' | translate }}</span>
             <span class="value">{{ patient.cin || 'N/A' }}</span>
           </div>
           <div class="info-divider"></div>
           <div class="info-item">
-            <span class="label">Insurance</span>
-            <span class="value">{{ patient.insuranceProvider || 'Private' }}</span>
+            <span class="label">{{ 'PATIENTS.DOSSIER.INSURANCE' | translate }}</span>
+            <span class="value">{{ patient.insuranceProvider || ('PATIENTS.DOSSIER.PRIVATE' | translate) }}</span>
           </div>
         </div>
 
@@ -70,7 +77,7 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
               (click)="activeTab.set(tab.id)"
             >
               <span class="material-icons">{{ tab.icon }}</span>
-              {{ tab.label }}
+              {{ tab.key | translate }}
             </button>
           }
         </nav>
@@ -84,22 +91,22 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
               <div class="overview-grid">
                 <!-- Summary Cards -->
                 <div class="summary-card">
-                  <h3>Next Appointment</h3>
+                  <h3>{{ 'PATIENTS.NEXT_APPOINTMENT' | translate }}</h3>
                   <div class="card-content">
-                    <span class="date">May 24, 2026 - 10:00 AM</span>
-                    <span class="desc">Regular checkup & Aligner check</span>
+                    <span class="date">{{ nextAppointmentDate | date:'longDate' }} - {{ nextAppointmentDate | date:'shortTime' }}</span>
+                    <span class="desc">{{ 'SCHEDULE.TYPES.CHECKUP' | translate }}</span>
                   </div>
                 </div>
                 <div class="summary-card">
-                  <h3>Latest Note</h3>
+                  <h3>{{ 'PATIENTS.DOSSIER.LATEST_NOTE' | translate }}</h3>
                   <div class="card-content">
-                    <p>"Patient is responding well to treatment. Aligner 5 fits perfectly."</p>
-                    <span class="date">May 10, 2026</span>
+                    <p>"Patient is responding well to treatment."</p>
+                    <span class="date">{{ latestNoteDate | date:'mediumDate' }}</span>
                   </div>
                 </div>
                 <div class="summary-card dental-chart-card">
                   <div class="chart-card-header">
-                    <h3>Dental Chart</h3>
+                    <h3>{{ 'DENTAL_CHART.TITLE' | translate }}</h3>
                     <button class="btn-sm btn-outline" (click)="showDentalChartFullscreen.set(!showDentalChartFullscreen())">
                       <span class="material-icons">{{ showDentalChartFullscreen() ? 'close_fullscreen' : 'open_in_full' }}</span>
                     </button>
@@ -120,22 +127,17 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
           @case ('history') {
             <div class="tab-pane">
               <section class="dossier-section">
-                <h2>Medical History</h2>
+                <h2>{{ 'PATIENTS.DOSSIER.MEDICAL_HISTORY' | translate }}</h2>
                 <div class="history-content">
                   <div class="info-group">
-                    <label>General Health</label>
-                    <p>Excellent, no chronic conditions reported.</p>
+                    <label>{{ 'PATIENTS.DOSSIER.GENERAL_HEALTH' | translate }}</label>
+                    <p>Good</p>
                   </div>
                   <div class="info-group">
-                    <label>Allergies</label>
+                    <label>{{ 'PATIENTS.DOSSIER.ALLERGIES' | translate }}</label>
                     <div class="tag-list">
                       <span class="tag alert">Penicillin</span>
-                      <span class="tag alert">Latex</span>
                     </div>
-                  </div>
-                  <div class="info-group">
-                    <label>Chief Complaint</label>
-                    <p>"I want to fix the crowding in my upper front teeth and close the gap in the lower jaw."</p>
                   </div>
                 </div>
               </section>
@@ -144,19 +146,11 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
           @case ('diagnostics') {
             <div class="tab-pane">
               <section class="dossier-section">
-                <h2>Diagnostics</h2>
+                <h2>{{ 'PATIENTS.DOSSIER.DIAGNOSTICS' | translate }}</h2>
                 <div class="diagnostics-grid">
                   <div class="info-group">
-                    <label>Skeletal Class</label>
+                    <label>{{ 'PATIENTS.DOSSIER.SKELETAL_CLASS' | translate }}</label>
                     <p>Class I</p>
-                  </div>
-                  <div class="info-group">
-                    <label>Malocclusion</label>
-                    <p>Crowding (Moderate), Diastema (Mild)</p>
-                  </div>
-                  <div class="info-group">
-                    <label>Facial Analysis</label>
-                    <p>Symmetrical, Convex profile</p>
                   </div>
                 </div>
               </section>
@@ -165,23 +159,11 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
           @case ('plan') {
              <div class="tab-pane">
               <section class="dossier-section">
-                <h2>Treatment Plan (v1)</h2>
+                <h2>{{ 'PATIENTS.DOSSIER.TREATMENT_PLAN' | translate }}</h2>
                 <div class="plan-details">
                   <div class="info-group">
                     <label>Appliance Type</label>
-                    <p>Invisalign Full Package</p>
-                  </div>
-                  <div class="info-group">
-                    <label>Goals</label>
-                    <ul>
-                      <li>Correct upper crowding</li>
-                      <li>Close lower diastema</li>
-                      <li>Improve smile arc</li>
-                    </ul>
-                  </div>
-                  <div class="info-group">
-                    <label>Estimated Duration</label>
-                    <p>18 - 24 months</p>
+                    <p>Invisalign</p>
                   </div>
                 </div>
               </section>
@@ -189,29 +171,25 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
           }
           @case ('appointments') {
             <div class="tab-pane">
-              <h2>Appointments History</h2>
+              <h2>{{ 'COMMON.SCHEDULE' | translate }}</h2>
               <table class="simple-table">
                 <thead>
                   <tr>
-                    <th>Date</th>
+                    <th>{{ 'COMMON.DATE' | translate }}</th>
                     <th>Type</th>
-                    <th>Status</th>
+                    <th>{{ 'COMMON.STATUS' | translate }}</th>
                     <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>May 10, 2026</td>
-                    <td>Checkup</td>
-                    <td><span class="status-badge completed">Completed</span></td>
-                    <td>Aligner 4 delivered.</td>
-                  </tr>
-                  <tr>
-                    <td>Apr 12, 2026</td>
-                    <td>Initial Fit</td>
-                    <td><span class="status-badge completed">Completed</span></td>
-                    <td>First set of aligners fitted.</td>
-                  </tr>
+                  @for (app of pastAppointments; track app.date) {
+                    <tr>
+                      <td>{{ app.date | date:'mediumDate' }}</td>
+                      <td>{{ 'SCHEDULE.TYPES.' + app.type.toUpperCase() | translate }}</td>
+                      <td><span class="status-badge completed">{{ 'PATIENTS.DOSSIER.STATUS_COMPLETED' | translate }}</span></td>
+                      <td>{{ app.notes }}</td>
+                    </tr>
+                  }
                 </tbody>
               </table>
             </div>
@@ -219,17 +197,8 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
           @case ('notes') {
             <div class="tab-pane">
               <div class="notes-header">
-                <h2>Clinical Notes</h2>
-                <button class="btn-primary btn-sm">Add Note</button>
-              </div>
-              <div class="notes-list">
-                <div class="note-item">
-                  <div class="note-meta">
-                    <span class="author">Dr. El Mansouri</span>
-                    <span class="date">May 10, 2026</span>
-                  </div>
-                  <p class="note-content">SOAP: Subjective: Patient reports no pain. Objective: Aligner 4 fits well. Assessment: Progressing as planned. Plan: Next visit in 4 weeks.</p>
-                </div>
+                <h2>{{ 'DENTAL_CHART.REPORT_TITLE' | translate }}</h2>
+                <button class="btn-primary btn-sm">{{ 'COMMON.ADD' | translate }} {{ 'DENTAL_CHART.NOTE_LABEL' | translate }}</button>
               </div>
             </div>
           }
@@ -254,11 +223,66 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
               </div>
             </div>
           }
+          @case ('billing') {
+            <div class="tab-pane">
+              <div class="billing-header">
+                <h2>{{ 'BILLING.TITLE' | translate }}</h2>
+                <button class="btn-primary" [routerLink]="['/billing/invoices/create']" [queryParams]="{ patientId: patient.id }">
+                  <span class="material-icons">add</span>
+                  {{ 'BILLING.NEW_INVOICE' | translate }}
+                </button>
+              </div>
+
+              <div class="billing-summary-mini">
+                <div class="mini-stat">
+                  <span class="label">{{ 'BILLING.TOTAL_INVOICED' | translate }}</span>
+                  <span class="value">{{ totalInvoicedForPatient() | number:'1.2-2' }} MAD</span>
+                </div>
+                <div class="mini-stat">
+                  <span class="label">{{ 'BILLING.OUTSTANDING' | translate }}</span>
+                  <span class="value warning">{{ balanceDueForPatient() | number:'1.2-2' }} MAD</span>
+                </div>
+              </div>
+
+              <table class="simple-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'BILLING.INVOICE_NUMBER' | translate }}</th>
+                    <th>{{ 'COMMON.STATUS' | translate }}</th>
+                    <th>{{ 'COMMON.DATE' | translate }}</th>
+                    <th>{{ 'COMMON.AMOUNT' | translate }}</th>
+                    <th>{{ 'COMMON.ACTIONS' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (invoice of patientInvoices(); track invoice.id) {
+                    <tr>
+                      <td><span class="invoice-link" [routerLink]="['/billing/invoices', invoice.id]">{{ invoice.invoiceNumber }}</span></td>
+                      <td>
+                        <span class="status-badge" [class]="invoice.status.toLowerCase().replace('_', '-')">
+                          {{ 'BILLING.STATUS.' + invoice.status | translate }}
+                        </span>
+                      </td>
+                      <td>{{ invoice.issueDate | date:'mediumDate' }}</td>
+                      <td>{{ invoice.total | number:'1.2-2' }} {{ invoice.currency }}</td>
+                      <td>
+                        <button class="icon-btn" [title]="'PATIENTS.DOSSIER.DOWNLOAD_PDF' | translate"><span class="material-icons">download</span></button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="5" class="empty-state">{{ 'PATIENTS.DOSSIER.NO_INVOICES' | translate }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
         }
       </main>
       } @else {
         <div class="loading">
-          <p>Loading patient dossier...</p>
+          <p>{{ 'COMMON.LOADING' | translate }}</p>
         </div>
       }
     </div>
@@ -600,6 +624,82 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
       gap: 0.5rem;
       cursor: pointer;
     }
+    .btn-danger {
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #dc2626;
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-danger:hover {
+      background: #fee2e2;
+      border-color: #fecaca;
+    }
+    
+    .billing-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .billing-summary-mini {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      background: #f8fafc;
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .mini-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .mini-stat .label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+
+    .mini-stat .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .mini-stat .value.warning { color: #d97706; }
+
+    .invoice-link {
+      color: #4f46e5;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .invoice-link:hover { text-decoration: underline; }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem !important;
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .status-badge.sent { background: #e0e7ff; color: #4338ca; }
+    .status-badge.partially-paid { background: #fef3c7; color: #92400e; }
+    .status-badge.paid { background: #dcfce7; color: #166534; }
+    .status-badge.cancelled { background: #fee2e2; color: #991b1b; }
+
     .btn-sm { padding: 0.4rem 0.75rem; font-size: 0.85rem; }
 
     .loading {
@@ -671,21 +771,33 @@ import { DentalChartComponent } from '../../dental-chart/dental-chart.component'
 })
 export class PatientDossierComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   patientService = inject(PatientService);
   private chartService = inject(DentalChartService);
+  private invoiceService = inject(InvoiceService);
+  private translate = inject(TranslateService);
 
   activeTab = signal('overview');
   showDentalChartFullscreen = signal(false);
   dentalChartState: DentalChartState | null = null;
+  patientInvoices = signal<Invoice[]>([]);
+
+  nextAppointmentDate = new Date(new Date().setDate(new Date().getDate() + 8));
+  latestNoteDate = new Date(new Date().setDate(new Date().getDate() - 6));
+  pastAppointments = [
+    { date: new Date(new Date().setDate(new Date().getDate() - 6)), type: 'checkup', notes: 'Aligner 4 delivered.' },
+    { date: new Date(new Date().setDate(new Date().getDate() - 34)), type: 'initial', notes: 'First set of aligners fitted.' }
+  ];
 
   tabs = [
-    { id: 'overview', label: 'Overview', icon: 'dashboard' },
-    { id: 'history', label: 'Medical History', icon: 'medical_services' },
-    { id: 'diagnostics', label: 'Diagnostics', icon: 'biotech' },
-    { id: 'plan', label: 'Treatment Plan', icon: 'assignment' },
-    { id: 'appointments', label: 'Appointments', icon: 'event' },
-    { id: 'notes', label: 'Notes', icon: 'history_edu' },
-    { id: 'documents', label: 'Documents', icon: 'folder' },
+    { id: 'overview', key: 'COMMON.OVERVIEW', icon: 'dashboard' },
+    { id: 'history', key: 'PATIENTS.DOSSIER.MEDICAL_HISTORY', icon: 'medical_services' },
+    { id: 'diagnostics', key: 'PATIENTS.DOSSIER.DIAGNOSTICS', icon: 'biotech' },
+    { id: 'plan', key: 'PATIENTS.DOSSIER.TREATMENT_PLAN', icon: 'assignment' },
+    { id: 'appointments', key: 'COMMON.SCHEDULE', icon: 'event' },
+    { id: 'notes', key: 'DENTAL_CHART.REPORT_TITLE', icon: 'history_edu' },
+    { id: 'documents', key: 'COMMON.ANALYTICS', icon: 'folder' },
+    { id: 'billing', key: 'COMMON.BILLING', icon: 'payments' },
   ];
 
   ngOnInit() {
@@ -693,18 +805,32 @@ export class PatientDossierComponent implements OnInit {
       const id = params['id'];
       if (id) {
         this.patientService.setCurrentPatient(id);
-        // Load dental chart for current patient
         const patient = this.patientService.currentPatient();
         if (patient) {
           this.dentalChartState = this.chartService.loadChart(patient.id, patient.dateOfBirth);
+          this.loadPatientBilling(patient.id);
         }
       }
     });
   }
 
+  loadPatientBilling(patientId: string) {
+    this.invoiceService.getPatientInvoices(patientId).subscribe(invoices => {
+      this.patientInvoices.set(invoices);
+    });
+  }
+
+  totalInvoicedForPatient = computed(() => {
+    return this.patientInvoices().reduce((sum, inv) => sum + inv.total, 0);
+  });
+
+  balanceDueForPatient = computed(() => {
+    return this.patientInvoices()
+      .filter(inv => inv.status !== 'PAID' && inv.status !== 'CANCELLED')
+      .reduce((sum, inv) => sum + inv.total, 0);
+  });
+
   onToothSelected(tooth: ToothState) {
-    // The dental chart component handles status changes internally.
-    // Re-read the chart state to keep in sync.
     const chart = this.chartService.currentChart();
     if (chart) {
       this.dentalChartState = { ...chart };
@@ -720,5 +846,20 @@ export class PatientDossierComponent implements OnInit {
       age--;
     }
     return age;
+  }
+
+  onDelete() {
+    const patient = this.patientService.currentPatient();
+    if (patient) {
+      const confirmMsg = this.translate.instant('PATIENTS.DOSSIER.ARCHIVE_CONFIRM', { name: `${patient.firstName} ${patient.lastName}` });
+      if (confirm(confirmMsg)) {
+        this.patientService.deletePatient(patient.id).subscribe({
+          next: () => {
+            this.router.navigate(['/patients']);
+          },
+          error: (err) => console.error('Error deleting patient', err)
+        });
+      }
+    }
   }
 }

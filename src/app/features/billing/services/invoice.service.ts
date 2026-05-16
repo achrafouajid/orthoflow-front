@@ -1,80 +1,101 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Invoice, InvoiceStatus, Payment, Quote, BillingSummary } from '../models/billing.model';
-import { tap } from 'rxjs/operators';
-import { firstValueFrom } from 'rxjs';
+import { Observable, BehaviorSubject, map, tap, finalize, switchMap, shareReplay } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InvoiceService {
   private http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:8080/api/v1';
+  private readonly apiUrl = 'http://localhost:8080/api/v1/invoices';
 
+  // Signals for UI state
   private invoicesSignal = signal<Invoice[]>([]);
-  private quotesSignal = signal<Quote[]>([]);
-  private currentInvoiceSignal = signal<Invoice | null>(null);
   private summarySignal = signal<BillingSummary | null>(null);
+  private loadingSignal = signal<boolean>(false);
+  private quotesSignal = signal<Quote[]>([]);
 
+  // Computed selectors for components
   invoices = computed(() => this.invoicesSignal());
-  quotes = computed(() => this.quotesSignal());
-  currentInvoice = computed(() => this.currentInvoiceSignal());
   summary = computed(() => this.summarySignal());
+  loading = computed(() => this.loadingSignal());
+  quotes = computed(() => this.quotesSignal());
 
   constructor() {
     this.refreshInvoices();
   }
 
-  async refreshInvoices() {
-    try {
-      const [invoices, summary] = await Promise.all([
-        firstValueFrom(this.http.get<Invoice[]>(`${this.apiUrl}/invoices`)),
-        firstValueFrom(this.http.get<BillingSummary>(`${this.apiUrl}/invoices/summary`))
-      ]);
-      this.invoicesSignal.set(invoices);
-      this.summarySignal.set(summary);
-    } catch (error) {
-      console.error('Failed to fetch invoices or summary', error);
-    }
+  /**
+   * Refreshes the list of invoices and the global billing summary.
+   */
+  refreshInvoices(): void {
+    this.loadingSignal.set(true);
+    this.http.get<Invoice[]>(this.apiUrl)
+      .pipe(
+        tap(invoices => this.invoicesSignal.set(invoices)),
+        switchMap(() => this.getBillingSummary()),
+        tap(summary => this.summarySignal.set(summary)),
+        finalize(() => this.loadingSignal.set(false))
+      )
+      .subscribe({
+        error: (err) => console.error('Failed to refresh billing data', err)
+      });
   }
 
-  async getInvoice(id: string) {
-    try {
-      const invoice = await firstValueFrom(this.http.get<Invoice>(`${this.apiUrl}/invoices/${id}`));
-      this.currentInvoiceSignal.set(invoice);
-      return invoice;
-    } catch (error) {
-      console.error('Failed to fetch invoice', error);
-      return null;
-    }
+  /**
+   * Fetches invoices for a specific patient.
+   */
+  getPatientInvoices(patientId: string): Observable<Invoice[]> {
+    const params = new HttpParams().set('patientId', patientId);
+    return this.http.get<Invoice[]>(this.apiUrl, { params }).pipe(
+      shareReplay(1)
+    );
   }
 
-  async createInvoice(invoice: any) {
-    try {
-      const newInvoice = await firstValueFrom(this.http.post<Invoice>(`${this.apiUrl}/invoices`, invoice));
-      this.invoicesSignal.update(invoices => [...invoices, newInvoice]);
-      return newInvoice;
-    } catch (error) {
-      console.error('Failed to create invoice', error);
-      throw error;
-    }
+  /**
+   * Fetches a single invoice by ID.
+   */
+  getInvoice(id: string): Observable<Invoice> {
+    return this.http.get<Invoice>(`${this.apiUrl}/${id}`);
   }
 
-  async recordPayment(invoiceId: string, payment: any) {
-    try {
-      await firstValueFrom(this.http.post(`${this.apiUrl}/invoices/${invoiceId}/payments`, payment));
-      // Refresh current invoice and list
-      await this.getInvoice(invoiceId);
-      await this.refreshInvoices();
-    } catch (error) {
-      console.error('Failed to record payment', error);
-      throw error;
-    }
+  /**
+   * Creates a new invoice and updates the internal state.
+   */
+  createInvoice(invoice: Partial<Invoice>): Observable<Invoice> {
+    this.loadingSignal.set(true);
+    return this.http.post<Invoice>(this.apiUrl, invoice).pipe(
+      tap(newInvoice => {
+        this.invoicesSignal.update(invoices => [newInvoice, ...invoices]);
+        this.refreshSummary();
+      }),
+      finalize(() => this.loadingSignal.set(false))
+    );
   }
 
-  getBillingSummary() {
-    // This could also be a Signal or a call to a dedicated endpoint
-    // For now, let's make it an async call that updates a signal if needed
-    return firstValueFrom(this.http.get<BillingSummary>(`${this.apiUrl}/invoices/summary`));
+  /**
+   * Records a payment for an invoice.
+   */
+  recordPayment(invoiceId: string, payment: Partial<Payment>): Observable<Payment> {
+    this.loadingSignal.set(true);
+    return this.http.post<Payment>(`${this.apiUrl}/${invoiceId}/payments`, payment).pipe(
+      tap(() => {
+        // Refresh both the specific invoice and the summary
+        this.refreshInvoices();
+      }),
+      finalize(() => this.loadingSignal.set(false))
+    );
+  }
+
+  /**
+   * Fetches the billing summary (total invoiced, collected, etc.).
+   */
+  getBillingSummary(): Observable<BillingSummary> {
+    return this.http.get<BillingSummary>(`${this.apiUrl}/summary`);
+  }
+
+  private refreshSummary(): void {
+    this.getBillingSummary().subscribe(summary => this.summarySignal.set(summary));
   }
 }

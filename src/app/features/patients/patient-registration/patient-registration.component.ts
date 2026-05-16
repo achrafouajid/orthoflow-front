@@ -1,106 +1,125 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { PatientService } from '../../../core/services/patient.service';
+import { Patient } from '../../../core/models/patient.model';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-patient-registration',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslateModule],
   template: `
     <div class="registration-container">
       <header class="page-header">
-        <button class="back-btn" routerLink="/patients">
+        <button class="back-btn" [routerLink]="editMode ? ['/patients', patientId] : ['/patients']">
           <span class="material-icons">arrow_back</span>
         </button>
         <div class="header-content">
-          <h1>New Patient Registration</h1>
-          <p>Enter patient details to create a new dossier</p>
+          <h1>{{ (editMode ? 'PATIENTS.DOSSIER.EDIT_DOSSIER' : 'PATIENTS.DOSSIER.REGISTRATION_TITLE') | translate }}</h1>
+          <p>{{ (editMode ? 'PATIENTS.DOSSIER.EDIT_SUBTITLE' : 'PATIENTS.DOSSIER.REGISTRATION_SUBTITLE') | translate }}</p>
         </div>
       </header>
 
-      <form [formGroup]="patientForm" (ngSubmit)="onSubmit()" class="registration-form">
-        <div class="form-grid">
-          <!-- Identity Section -->
-          <div class="form-section">
-            <h2 class="section-title">Identity</h2>
-            <div class="inputs-grid">
-              <div class="form-group">
-                <label for="firstName">First Name</label>
-                <input id="firstName" formControlName="firstName" type="text" placeholder="e.g. Amine" />
-              </div>
-              <div class="form-group">
-                <label for="lastName">Last Name</label>
-                <input id="lastName" formControlName="lastName" type="text" placeholder="e.g. El Mansouri" />
-              </div>
-              <div class="form-group">
-                <label for="dateOfBirth">Date of Birth</label>
-                <input id="dateOfBirth" formControlName="dateOfBirth" type="date" />
-              </div>
-              <div class="form-group">
-                <label for="gender">Gender</label>
-                <select id="gender" formControlName="gender">
-                  <option value="M">Male</option>
-                  <option value="F">Female</option>
-                  <option value="O">Other</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="cin">CIN / National ID</label>
-                <input id="cin" formControlName="cin" type="text" placeholder="e.g. BK123456" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Contact Section -->
-          <div class="form-section">
-            <h2 class="section-title">Contact Information</h2>
-            <div class="inputs-grid">
-              <div class="form-group">
-                <label for="email">Email Address</label>
-                <input id="email" formControlName="email" type="email" placeholder="amine.m@email.com" />
-              </div>
-              <div class="form-group">
-                <label for="phone">Phone Number</label>
-                <input id="phone" formControlName="phone" type="tel" placeholder="+212 600-000000" />
-              </div>
-              <div class="form-group full-width">
-                <label for="address">Full Address</label>
-                <textarea id="address" formControlName="address" rows="2" placeholder="Street, City, Country"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <!-- Insurance Section -->
-          <div class="form-section">
-            <h2 class="section-title">Insurance</h2>
-            <div class="inputs-grid">
-              <div class="form-group">
-                <label for="insuranceProvider">Provider</label>
-                <select id="insuranceProvider" formControlName="insuranceProvider">
-                  <option value="">None</option>
-                  <option value="CNOPS">CNOPS</option>
-                  <option value="CNAM">CNAM</option>
-                  <option value="RAMED">RAMED</option>
-                  <option value="PRIVATE">Private Insurance</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="insuranceNumber">Policy Number</label>
-                <input id="insuranceNumber" formControlName="insuranceNumber" type="text" />
-              </div>
-            </div>
-          </div>
+      @if (loading()) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>{{ 'COMMON.LOADING' | translate }}</p>
         </div>
+      } @else {
+        <form [formGroup]="patientForm" (ngSubmit)="onSubmit()" class="registration-form">
+          <div class="form-grid">
+            <!-- Identity Section -->
+            <div class="form-section">
+              <h2 class="section-title">{{ 'PATIENTS.DOSSIER.IDENTITY' | translate }}</h2>
+              <div class="inputs-grid">
+                <div class="form-group">
+                  <label for="firstName">{{ 'PATIENTS.DOSSIER.FIRST_NAME' | translate }}</label>
+                  <input id="firstName" formControlName="firstName" type="text" [placeholder]="'PATIENTS.DOSSIER.FIRST_NAME' | translate" />
+                </div>
+                <div class="form-group">
+                  <label for="lastName">{{ 'PATIENTS.DOSSIER.LAST_NAME' | translate }}</label>
+                  <input id="lastName" formControlName="lastName" type="text" [placeholder]="'PATIENTS.DOSSIER.LAST_NAME' | translate" />
+                </div>
+                <div class="form-group">
+                  <label for="dateOfBirth">{{ 'PATIENTS.DOSSIER.DOB' | translate }}</label>
+                  <input id="dateOfBirth" formControlName="dateOfBirth" type="date" />
+                </div>
+                <div class="form-group">
+                  <label for="gender">{{ 'PATIENTS.DOSSIER.GENDER' | translate }}</label>
+                  <select id="gender" formControlName="gender">
+                    <option value="M">{{ 'PATIENTS.DOSSIER.GENDER_M' | translate }}</option>
+                    <option value="F">{{ 'PATIENTS.DOSSIER.GENDER_F' | translate }}</option>
+                    <option value="O">{{ 'PATIENTS.DOSSIER.GENDER_O' | translate }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="cin">{{ 'PATIENTS.DOSSIER.CIN' | translate }}</label>
+                  <input id="cin" formControlName="cin" type="text" [placeholder]="'PATIENTS.DOSSIER.CIN_PLACEHOLDER' | translate" />
+                </div>
+                @if (editMode) {
+                  <div class="form-group">
+                    <label for="status">{{ 'COMMON.STATUS' | translate }}</label>
+                    <select id="status" formControlName="status">
+                      <option value="ACTIVE">{{ 'PATIENTS.DOSSIER.STATUS_ACTIVE' | translate }}</option>
+                      <option value="COMPLETED">{{ 'PATIENTS.DOSSIER.STATUS_COMPLETED' | translate }}</option>
+                      <option value="ON_HOLD">{{ 'PATIENTS.DOSSIER.STATUS_ON_HOLD' | translate }}</option>
+                    </select>
+                  </div>
+                }
+              </div>
+            </div>
 
-        <div class="form-actions">
-          <button type="button" class="btn-ghost" routerLink="/patients">Cancel</button>
-          <button type="submit" class="btn-primary" [disabled]="patientForm.invalid">
-            Register Patient
-          </button>
-        </div>
-      </form>
+            <!-- Contact Section -->
+            <div class="form-section">
+              <h2 class="section-title">{{ 'PATIENTS.DOSSIER.CONTACT_INFO' | translate }}</h2>
+              <div class="inputs-grid">
+                <div class="form-group">
+                  <label for="email">{{ 'PATIENTS.DOSSIER.EMAIL' | translate }}</label>
+                  <input id="email" formControlName="email" type="email" [placeholder]="'PATIENTS.DOSSIER.EMAIL_PLACEHOLDER' | translate" />
+                </div>
+                <div class="form-group">
+                  <label for="phone">{{ 'PATIENTS.DOSSIER.PHONE' | translate }}</label>
+                  <input id="phone" formControlName="phone" type="tel" [placeholder]="'PATIENTS.DOSSIER.PHONE_PLACEHOLDER' | translate" />
+                </div>
+                <div class="form-group full-width">
+                  <label for="address">{{ 'PATIENTS.DOSSIER.ADDRESS' | translate }}</label>
+                  <textarea id="address" formControlName="address" rows="2" [placeholder]="'PATIENTS.DOSSIER.ADDRESS_PLACEHOLDER' | translate"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Insurance Section -->
+            <div class="form-section">
+              <h2 class="section-title">{{ 'PATIENTS.DOSSIER.INSURANCE' | translate }}</h2>
+              <div class="inputs-grid">
+                <div class="form-group">
+                  <label for="insuranceProvider">{{ 'PATIENTS.DOSSIER.INSURANCE' | translate }}</label>
+                  <select id="insuranceProvider" formControlName="insuranceProvider">
+                    <option value="">{{ 'PATIENTS.DOSSIER.INSURANCE_NONE' | translate }}</option>
+                    <option value="CNOPS">CNOPS</option>
+                    <option value="CNAM">CNAM</option>
+                    <option value="RAMED">RAMED</option>
+                    <option value="PRIVATE">{{ 'PATIENTS.DOSSIER.INSURANCE_PRIVATE' | translate }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="insuranceNumber">{{ 'PATIENTS.DOSSIER.POLICY_NUMBER' | translate }}</label>
+                  <input id="insuranceNumber" formControlName="insuranceNumber" type="text" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-ghost" [routerLink]="editMode ? ['/patients', patientId] : ['/patients']">{{ 'COMMON.CANCEL' | translate }}</button>
+            <button type="submit" class="btn-primary" [disabled]="patientForm.invalid">
+              {{ (editMode ? 'COMMON.EDIT' : 'COMMON.ADD') | translate }} {{ 'PATIENTS.NAME' | translate }}
+            </button>
+          </div>
+        </form>
+      }
     </div>
   `,
   styles: [`
@@ -252,6 +271,30 @@ import { PatientService } from '../../../core/services/patient.service';
       color: #374151;
     }
 
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem;
+      color: #6b7280;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #4f46e5;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     /* Responsive Styles */
     @media (max-width: 768px) {
       .registration-container {
@@ -286,10 +329,15 @@ import { PatientService } from '../../../core/services/patient.service';
     }
   `]
 })
-export class PatientRegistrationComponent {
+export class PatientRegistrationComponent implements OnInit {
   private fb = inject(FormBuilder);
   private patientService = inject(PatientService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  editMode = false;
+  patientId: string | null = null;
+  loading = this.patientService.loading;
 
   patientForm = this.fb.group({
     firstName: ['', Validators.required],
@@ -305,10 +353,39 @@ export class PatientRegistrationComponent {
     status: ['ACTIVE']
   });
 
+  ngOnInit() {
+    this.patientId = this.route.snapshot.paramMap.get('id');
+    if (this.patientId && this.patientId !== 'register') {
+      this.editMode = true;
+      this.loadPatientData(this.patientId);
+    }
+  }
+
+  loadPatientData(id: string) {
+    this.patientService.setCurrentPatient(id);
+    const patient = this.patientService.currentPatient();
+    if (patient) {
+      this.patientForm.patchValue(patient as any);
+    } else {
+      // If not in signal, the service will fetch it. We might need to subscribe to the signal.
+      // For simplicity in this bootstrap, we assume it's loaded or we wait.
+    }
+  }
+
   onSubmit() {
     if (this.patientForm.valid) {
-      this.patientService.addPatient(this.patientForm.value as any);
-      this.router.navigate(['/patients']);
+      const patientData = this.patientForm.value as any;
+      if (this.editMode && this.patientId) {
+        this.patientService.updatePatient(this.patientId, patientData).subscribe({
+          next: () => this.router.navigate(['/patients', this.patientId]),
+          error: (err) => console.error('Error updating patient', err)
+        });
+      } else {
+        this.patientService.addPatient(patientData).subscribe({
+          next: () => this.router.navigate(['/patients']),
+          error: (err) => console.error('Error creating patient', err)
+        });
+      }
     }
   }
 }

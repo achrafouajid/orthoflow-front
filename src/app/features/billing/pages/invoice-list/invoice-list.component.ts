@@ -3,26 +3,27 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { InvoiceService } from '../../services/invoice.service';
 import { InvoiceStatus } from '../../models/billing.model';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-invoice-list',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule],
   template: `
     <div class="billing-container">
       <header class="page-header">
         <div class="header-content">
-          <h1>Facturation</h1>
-          <p>Manage invoices, quotes and payments</p>
+          <h1>{{ 'BILLING.TITLE' | translate }}</h1>
+          <p>{{ 'BILLING.SUBTITLE' | translate }}</p>
         </div>
         <div class="header-actions">
           <button class="btn-secondary" routerLink="/billing/quotes">
             <span class="material-icons">description</span>
-            Quotes
+            {{ 'BILLING.QUOTES' | translate }}
           </button>
           <button class="btn-primary" routerLink="create">
             <span class="material-icons">add</span>
-            New Invoice
+            {{ 'BILLING.NEW_INVOICE' | translate }}
           </button>
         </div>
       </header>
@@ -34,7 +35,7 @@ import { InvoiceStatus } from '../../models/billing.model';
               <span class="material-icons">receipt</span>
             </div>
             <div class="stat-info">
-              <span class="stat-label">Total Invoiced</span>
+              <span class="stat-label">{{ 'BILLING.TOTAL_INVOICED' | translate }}</span>
               <span class="stat-value">{{ summary.totalInvoiced | number:'1.2-2' }} MAD</span>
             </div>
           </div>
@@ -43,7 +44,7 @@ import { InvoiceStatus } from '../../models/billing.model';
               <span class="material-icons">payments</span>
             </div>
             <div class="stat-info">
-              <span class="stat-label">Total Collected</span>
+              <span class="stat-label">{{ 'BILLING.TOTAL_COLLECTED' | translate }}</span>
               <span class="stat-value">{{ summary.totalCollected | number:'1.2-2' }} MAD</span>
             </div>
           </div>
@@ -52,7 +53,7 @@ import { InvoiceStatus } from '../../models/billing.model';
               <span class="material-icons">pending_actions</span>
             </div>
             <div class="stat-info">
-              <span class="stat-label">Outstanding</span>
+              <span class="stat-label">{{ 'BILLING.OUTSTANDING' | translate }}</span>
               <span class="stat-value">{{ summary.outstandingAmount | number:'1.2-2' }} MAD</span>
             </div>
           </div>
@@ -62,19 +63,19 @@ import { InvoiceStatus } from '../../models/billing.model';
       <div class="filters-bar">
         <div class="search-input">
           <span class="material-icons">search</span>
-          <input type="text" placeholder="Search by invoice # or patient name..." />
+          <input type="text" [placeholder]="'COMMON.SEARCH' | translate" />
         </div>
         <div class="filters-actions">
           <select class="filter-select">
-            <option value="">All Statuses</option>
-            <option value="DRAFT">Draft</option>
-            <option value="SENT">Sent</option>
-            <option value="PARTIALLY_PAID">Partially Paid</option>
-            <option value="PAID">Paid</option>
+            <option value="">{{ 'BILLING.ALL_STATUSES' | translate }}</option>
+            <option value="DRAFT">{{ 'BILLING.STATUS.DRAFT' | translate }}</option>
+            <option value="SENT">{{ 'BILLING.STATUS.SENT' | translate }}</option>
+            <option value="PARTIALLY_PAID">{{ 'BILLING.STATUS.PARTIALLY_PAID' | translate }}</option>
+            <option value="PAID">{{ 'BILLING.STATUS.PAID' | translate }}</option>
           </select>
           <button class="btn-filter">
             <span class="material-icons">filter_list</span>
-            Filters
+            {{ 'COMMON.FILTER' | translate }}
           </button>
         </div>
       </div>
@@ -83,12 +84,12 @@ import { InvoiceStatus } from '../../models/billing.model';
         <table class="billing-table">
           <thead>
             <tr>
-              <th>Invoice #</th>
-              <th>Patient</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Actions</th>
+              <th>{{ 'BILLING.INVOICE_NUMBER' | translate }}</th>
+              <th>{{ 'PATIENTS.NAME' | translate }}</th>
+              <th>{{ 'COMMON.STATUS' | translate }}</th>
+              <th>{{ 'COMMON.DATE' | translate }}</th>
+              <th>{{ 'COMMON.AMOUNT' | translate }}</th>
+              <th>{{ 'COMMON.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -105,13 +106,13 @@ import { InvoiceStatus } from '../../models/billing.model';
                 </td>
                 <td>
                   <span class="status-badge" [class]="invoice.status.toLowerCase().replace('_', '-')">
-                    {{ invoice.status.replace('_', ' ') }}
+                    {{ 'BILLING.STATUS.' + invoice.status | translate }}
                   </span>
                 </td>
                 <td>
                   <div class="date-info">
                     <span class="issue-date">{{ invoice.issueDate | date:'mediumDate' }}</span>
-                    <span class="due-date">Due: {{ invoice.dueDate | date:'mediumDate' }}</span>
+                    <span class="due-date">{{ 'BILLING.DUE' | translate }}: {{ invoice.dueDate | date:'mediumDate' }}</span>
                   </div>
                 </td>
                 <td>
@@ -119,13 +120,13 @@ import { InvoiceStatus } from '../../models/billing.model';
                 </td>
                 <td>
                   <div class="row-actions">
-                    <button class="icon-btn" title="Download PDF" (click)="$event.stopPropagation()">
+                    <button class="icon-btn" [title]="'BILLING.DOWNLOAD_PDF' | translate" (click)="$event.stopPropagation()">
                       <span class="material-icons">download</span>
                     </button>
-                    <button class="icon-btn" title="Send Email" (click)="$event.stopPropagation()">
+                    <button class="icon-btn" [title]="'BILLING.SEND_EMAIL' | translate" (click)="$event.stopPropagation()">
                       <span class="material-icons">alternate_email</span>
                     </button>
-                    <button class="icon-btn" title="More" (click)="$event.stopPropagation()">
+                    <button class="icon-btn" [title]="'COMMON.MORE' | translate" (click)="$event.stopPropagation()">
                       <span class="material-icons">more_vert</span>
                     </button>
                   </div>

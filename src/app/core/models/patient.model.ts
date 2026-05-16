@@ -39,6 +39,7 @@ export interface TreatmentPlan {
 export interface Appointment {
   id: string;
   patientId: string;
+  patientName?: string;
   dateTime: string;
   type: string;
   status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';

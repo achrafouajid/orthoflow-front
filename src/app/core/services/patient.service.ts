@@ -1,21 +1,40 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { Patient, MedicalHistory, TreatmentPlan, Appointment, ClinicalNote, PatientDocument, SimulationMetadata } from '../models/patient.model';
+import { PatientApiService } from './patient-api.service';
+import { finalize, tap, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PatientService {
+  private api = inject(PatientApiService);
+  
   // Signals for state management
   private patientsSignal = signal<Patient[]>([]);
   private currentPatientSignal = signal<Patient | null>(null);
+  private loadingSignal = signal<boolean>(false);
   
   // Public selectors
   patients = computed(() => this.patientsSignal());
   currentPatient = computed(() => this.currentPatientSignal());
+  loading = computed(() => this.loadingSignal());
 
   constructor() {
-    // Initialize with mock data for Sprint 3/4 demo
-    this.loadMockPatients();
+    this.refreshPatients();
+  }
+
+  refreshPatients(): void {
+    this.loadingSignal.set(true);
+    this.api.getPatients()
+      .pipe(finalize(() => this.loadingSignal.set(false)))
+      .subscribe({
+        next: (patients) => this.patientsSignal.set(patients),
+        error: (err) => {
+          console.error('Failed to load patients', err);
+          // Fallback to mock data if API fails (for demo purposes)
+          this.loadMockPatients();
+        }
+      });
   }
 
   loadMockPatients() {
@@ -52,23 +71,60 @@ export class PatientService {
     this.patientsSignal.set(mockPatients);
   }
 
-  setCurrentPatient(id: string) {
+  setCurrentPatient(id: string): void {
     const patient = this.patientsSignal().find(p => p.id === id);
-    this.currentPatientSignal.set(patient || null);
+    if (patient) {
+      this.currentPatientSignal.set(patient);
+    } else {
+      this.loadingSignal.set(true);
+      this.api.getPatient(id)
+        .pipe(finalize(() => this.loadingSignal.set(false)))
+        .subscribe({
+          next: (p) => this.currentPatientSignal.set(p),
+          error: () => this.currentPatientSignal.set(null)
+        });
+    }
   }
 
-  addPatient(patient: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>) {
-    const newPatient: Patient = {
-      ...patient,
-      id: Math.random().toString(36).substring(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    this.patientsSignal.update(patients => [...patients, newPatient]);
-    return newPatient;
+  addPatient(patient: Partial<Patient>): Observable<Patient> {
+    this.loadingSignal.set(true);
+    return this.api.createPatient(patient).pipe(
+      tap(newPatient => {
+        this.patientsSignal.update(patients => [...patients, newPatient]);
+      }),
+      finalize(() => this.loadingSignal.set(false))
+    );
   }
 
-  // Mock methods for dossier data
+  updatePatient(id: string, patient: Partial<Patient>): Observable<Patient> {
+    this.loadingSignal.set(true);
+    return this.api.updatePatient(id, patient).pipe(
+      tap(updated => {
+        this.patientsSignal.update(patients => 
+          patients.map(p => p.id === id ? updated : p)
+        );
+        if (this.currentPatientSignal()?.id === id) {
+          this.currentPatientSignal.set(updated);
+        }
+      }),
+      finalize(() => this.loadingSignal.set(false))
+    );
+  }
+
+  deletePatient(id: string): Observable<void> {
+    this.loadingSignal.set(true);
+    return this.api.deletePatient(id).pipe(
+      tap(() => {
+        this.patientsSignal.update(patients => patients.filter(p => p.id !== id));
+        if (this.currentPatientSignal()?.id === id) {
+          this.currentPatientSignal.set(null);
+        }
+      }),
+      finalize(() => this.loadingSignal.set(false))
+    );
+  }
+
+  // Mock methods for dossier data (stays for now)
   getMedicalHistory(patientId: string): MedicalHistory {
     return {
       patientId,

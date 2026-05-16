@@ -1,22 +1,23 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslateModule],
   templateUrl: './landing.component.html',
 })
 export class LandingPageComponent {
   readonly featureCards = [
-    { title: 'Patient Hub', body: 'Centralized dossiers and treatment tracking.' },
-    { title: 'Smart Scheduler', body: 'Optimized booking for higher throughput.' },
-    { title: 'Digital Billing', body: 'Seamless insurance and payment workflows.' },
+    { key: 'COMMON.PATIENTS', bodyKey: 'PATIENTS.SUBTITLE' },
+    { key: 'COMMON.SCHEDULE', bodyKey: 'BILLING.QUOTES_SUBTITLE' },
+    { key: 'COMMON.BILLING', bodyKey: 'BILLING.SUBTITLE' },
   ];
 
   readonly stats = [
-    { value: '2k+', label: 'Practices' },
-    { value: '99.9%', label: 'Uptime' },
-    { value: '1M+', label: 'Patients' },
+    { value: '2k+', key: 'LANDING.PRACTICES' },
+    { value: '99.9%', key: 'LANDING.UPTIME' },
+    { value: '1M+', key: 'LANDING.PATIENTS_SERVED' },
   ];
 
   readonly testimonials = [

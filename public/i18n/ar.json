@@ -12,6 +12,22 @@
     "LOCALIZATION": "التعريب",
     "LANGUAGE": "اللغة"
   },
+  "BILLING": {
+    "TITLE": "الفواتير",
+    "INVOICES": "الفواتير",
+    "QUOTES": "عروض الأسعار",
+    "NEW_INVOICE": "فاتورة جديدة",
+    "TOTAL_INVOICED": "إجمالي الفواتير",
+    "TOTAL_COLLECTED": "إجمالي المحصل",
+    "OUTSTANDING": "المبلغ المتبقي",
+    "STATUS": {
+      "DRAFT": "مسودة",
+      "SENT": "مرسلة",
+      "PARTIALLY_PAID": "مدفوعة جزئياً",
+      "PAID": "مدفوعة",
+      "CANCELLED": "ملغاة"
+    }
+  },
   "AUTH": {
     "LOGIN": "تسجيل الدخول",
     "EMAIL": "البريد الإلكتروني",

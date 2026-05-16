@@ -92,7 +92,7 @@ export class DentalChartService {
     chart.teeth[toothId] = {
       id: toothId,
       status,
-      notes: notes || chart.teeth[toothId]?.notes,
+      notes: notes !== undefined ? notes : chart.teeth[toothId]?.notes,
     };
     chart.lastUpdated = new Date().toISOString();
     this.chartStore.set(patientId, chart);

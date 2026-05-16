@@ -42,6 +42,10 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
       },
+      {
+        path: 'billing',
+        loadChildren: () => import('./features/billing/billing.routes').then(m => m.BILLING_ROUTES),
+      },
     ]
   },
   {

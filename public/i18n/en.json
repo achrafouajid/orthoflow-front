@@ -12,6 +12,22 @@
     "LOCALIZATION": "Localization",
     "LANGUAGE": "Language"
   },
+  "BILLING": {
+    "TITLE": "Facturation",
+    "INVOICES": "Invoices",
+    "QUOTES": "Quotes",
+    "NEW_INVOICE": "New Invoice",
+    "TOTAL_INVOICED": "Total Invoiced",
+    "TOTAL_COLLECTED": "Total Collected",
+    "OUTSTANDING": "Outstanding",
+    "STATUS": {
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "PARTIALLY_PAID": "Partially Paid",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled"
+    }
+  },
   "AUTH": {
     "LOGIN": "Login",
     "EMAIL": "Email",

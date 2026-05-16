@@ -7,10 +7,14 @@ import { ADULT_SVG, CHILD_SVG } from './dental-chart-svg-data';
 
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
+import { FormsModule } from '@angular/forms';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 @Component({
   selector: 'app-dental-chart',
   standalone: true,
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, TranslateModule, FormsModule],
   template: `
     <div class="dental-chart-wrapper" (click)="closeStatusMenu()">
       <div class="chart-header">
@@ -65,6 +69,19 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
                 </button>
               }
             </div>
+
+            <div class="note-section">
+              <label class="note-label">
+                <span class="material-icons">edit_note</span>
+                {{ 'DENTAL_CHART.NOTE_LABEL' | translate }}
+              </label>
+              <textarea 
+                class="note-textarea"
+                [placeholder]="'DENTAL_CHART.NOTE_PLACEHOLDER' | translate"
+                [(ngModel)]="currentToothNote"
+                (ngModelChange)="saveToothNote()"
+              ></textarea>
+            </div>
           </div>
           
           <div class="menu-footer">
@@ -88,7 +105,48 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
           }
         </div>
       </div>
+
+      <!-- Report Section -->
+      <div class="report-container" [class.open]="showReport">
+        <button class="report-toggle" (click)="showReport = !showReport">
+          <div class="toggle-left">
+            <span class="material-icons">{{ showReport ? 'expand_less' : 'description' }}</span>
+            <span class="report-title">{{ 'DENTAL_CHART.REPORT_TITLE' | translate }}</span>
+            <span class="note-count" *ngIf="teethWithNotes.length > 0">{{ teethWithNotes.length }}</span>
+          </div>
+          <div class="toggle-right">
+            <button class="btn-export-sm" (click)="exportReport($event)" [title]="'DENTAL_CHART.EXPORT_REPORT' | translate">
+              <span class="material-icons">picture_as_pdf</span>
+            </button>
+            <span class="material-icons toggle-arrow">{{ showReport ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}</span>
+          </div>
+        </button>
+        
+        <div class="report-content" *ngIf="showReport">
+          @if (teethWithNotes.length > 0) {
+            <div class="report-list">
+              @for (tooth of teethWithNotes; track tooth.id) {
+                <div class="report-item" (mouseenter)="highlightTooth(tooth.id, true)" (mouseleave)="highlightTooth(tooth.id, false)">
+                  <div class="item-header">
+                    <span class="tooth-badge">#{{ tooth.id }}</span>
+                    <span class="tooth-name-sm">{{ getToothName(tooth.id) }}</span>
+                    <span class="status-indicator" [style.background]="getStatusColor(tooth.id)"></span>
+                    <span class="status-text-sm">{{ getToothStatusLabel(tooth.id) | translate }}</span>
+                  </div>
+                  <div class="item-note">{{ tooth.notes }}</div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="no-notes-state">
+              <span class="material-icons">notes</span>
+              <p>{{ 'DENTAL_CHART.NO_NOTES' | translate }}</p>
+            </div>
+          }
+        </div>
+      </div>
     </div>
+
   `,
   styleUrl: './dental-chart.component.css'
 })
@@ -111,6 +169,8 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
   svgContent: SafeHtml = '';
   hoveredTooth: string | null = null;
   selectedTooth: string | null = null;
+  currentToothNote: string = '';
+  showReport: boolean = false;
   private listenersAttached = false;
 
   statusOptions: { value: ToothStatus; label: string; color: string }[] = [
@@ -231,18 +291,161 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
   onToothClick(toothId: string) {
     this.selectedTooth = toothId;
     const state = (this.teeth && this.teeth[toothId]) || { id: toothId, status: 'present' };
+    this.currentToothNote = state.notes || '';
     this.toothSelected.emit(state);
+  }
+
+  saveToothNote() {
+    if (this.selectedTooth && this.patientId) {
+      const status = this.teeth[this.selectedTooth]?.status || 'present';
+      this.chartService.updateToothStatus(this.patientId, this.selectedTooth, status, this.currentToothNote);
+      this.teeth = { 
+        ...this.teeth, 
+        [this.selectedTooth]: { 
+          ...this.teeth[this.selectedTooth],
+          id: this.selectedTooth, 
+          status, 
+          notes: this.currentToothNote 
+        } 
+      };
+      const serialized = this.chartService.exportAsCompactString(this.patientId);
+      this.chartUpdated.emit(serialized);
+    }
+  }
+
+  async exportReport(event: MouseEvent) {
+    event.stopPropagation();
+    const container = this.chartContainer.nativeElement;
+    
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(79, 70, 229); // Indigo-600
+    doc.text('ORTHOFLOW', pageWidth / 2, y, { align: 'center' });
+    y += 8;
+    
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42); // Slate-900
+    doc.text('DENTAL CLINICAL REPORT', pageWidth / 2, y, { align: 'center' });
+    y += 12;
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate-500
+    doc.text(`Patient ID: ${this.patientId || 'N/A'}`, 20, y);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 20, y, { align: 'right' });
+    y += 5;
+    doc.text(`Chart Type: ${this.chartType.toUpperCase()}`, 20, y);
+    y += 10;
+
+    // Capture Chart
+    try {
+      const chartCanvas = await html2canvas(container, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      });
+      const chartImgData = chartCanvas.toDataURL('image/png');
+      const chartWidth = 120; // mm
+      const chartHeight = (chartCanvas.height * chartWidth) / chartCanvas.width;
+      doc.addImage(chartImgData, 'PNG', (pageWidth - chartWidth) / 2, y, chartWidth, chartHeight);
+      y += chartHeight + 15;
+    } catch (err) {
+      console.error('Failed to capture dental chart SVG', err);
+      doc.setTextColor(239, 68, 68);
+      doc.text('Error: Could not render dental chart figure.', 20, y);
+      y += 10;
+    }
+
+    // Legend Section
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text('EXPLANATORY LEGEND', 20, y);
+    doc.setDrawColor(79, 70, 229);
+    doc.line(20, y + 2, 60, y + 2);
+    y += 10;
+
+    doc.setFontSize(8);
+    let x = 20;
+    const colWidth = 45;
+    this.statusOptions.forEach((opt) => {
+      if (opt.value === 'present') return;
+      
+      if (x + colWidth > pageWidth - 10) {
+        x = 20;
+        y += 6;
+      }
+      
+      // Color dot
+      doc.setFillColor(opt.color);
+      doc.circle(x + 2, y - 1, 1.5, 'F');
+      
+      // Label
+      doc.setTextColor(71, 85, 105);
+      doc.text(this.translate.instant(opt.label), x + 6, y);
+      x += colWidth;
+    });
+    y += 15;
+
+    // Observations Section
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text('CLINICAL OBSERVATIONS', 20, y);
+    doc.line(20, y + 2, 70, y + 2);
+    y += 10;
+
+    if (this.teethWithNotes.length === 0) {
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184);
+      doc.text('No specific observations recorded for this patient.', 20, y);
+    } else {
+      for (const t of this.teethWithNotes) {
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
+        
+        doc.setFontSize(10);
+        doc.setTextColor(79, 70, 229);
+        doc.text(`TOOTH #${t.id} - ${this.getToothName(t.id).toUpperCase()}`, 20, y);
+        y += 5;
+        
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`STATUS: ${this.translate.instant(this.getToothStatusLabel(t.id))}`, 20, y);
+        y += 5;
+
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
+        const splitNote = doc.splitTextToSize(t.notes || '', pageWidth - 40);
+        doc.text(splitNote, 20, y);
+        y += (splitNote.length * 5) + 8;
+      }
+    }
+
+    // Footer on last page
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Generated by OrthoFlow Dental Management System', pageWidth / 2, 285, { align: 'center' });
+
+    doc.save(`dental_report_${this.patientId || 'patient'}_${new Date().getTime()}.pdf`);
+  }
+
+  get teethWithNotes(): ToothState[] {
+    return Object.values(this.teeth || {}).filter(t => t.notes && t.notes.trim() !== '');
   }
 
   selectStatus(toothId: string, status: ToothStatus) {
     if (this.patientId) {
-      this.chartService.updateToothStatus(this.patientId, toothId, status);
-      this.teeth = { ...this.teeth, [toothId]: { id: toothId, status } };
+      this.chartService.updateToothStatus(this.patientId, toothId, status, this.currentToothNote);
+      this.teeth = { ...this.teeth, [toothId]: { id: toothId, status, notes: this.currentToothNote } };
       const serialized = this.chartService.exportAsCompactString(this.patientId);
       this.chartUpdated.emit(serialized);
     }
     this.applyToothColor(toothId);
-    this.selectedTooth = null;
   }
 
   closeStatusMenu() {
@@ -254,7 +457,7 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
     const prefix = this.getToothPrefix();
     const allParents = this.chartContainer.nativeElement.querySelectorAll(`[class*="${prefix}"][class*="-parent"]`);
     allParents.forEach((el: any) => {
-      el.style.fill = 'none';
+      el.style.fill = 'transparent';
       el.style.opacity = '1';
     });
 
@@ -272,7 +475,7 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
     const color = DentalChartService.STATUS_COLORS[status];
 
     if (status === 'present' || color === 'none') {
-      el.style.fill = 'none';
+      el.style.fill = 'transparent';
       el.style.opacity = '1';
     } else {
       el.style.fill = color;

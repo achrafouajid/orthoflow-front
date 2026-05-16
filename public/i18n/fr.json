@@ -12,6 +12,22 @@
     "LOCALIZATION": "Localisation",
     "LANGUAGE": "Langue"
   },
+  "BILLING": {
+    "TITLE": "Facturation",
+    "INVOICES": "Factures",
+    "QUOTES": "Devis",
+    "NEW_INVOICE": "Nouvelle Facture",
+    "TOTAL_INVOICED": "Total Facturé",
+    "TOTAL_COLLECTED": "Total Encaissé",
+    "OUTSTANDING": "Reste à payer",
+    "STATUS": {
+      "DRAFT": "Brouillon",
+      "SENT": "Envoyée",
+      "PARTIALLY_PAID": "Partiellement Payée",
+      "PAID": "Payée",
+      "CANCELLED": "Annulée"
+    }
+  },
   "AUTH": {
     "LOGIN": "Connexion",
     "EMAIL": "Email",
@@ -40,6 +56,14 @@
       "MISSING": "Absente",
       "POST": "Pivot/Tenon",
       "PRESENT": "Présente"
-    }
+    },
+    "NOTE_LABEL": "Note clinique",
+    "NOTE_PLACEHOLDER": "Ajouter une note...",
+    "REPORT_TITLE": "Rapport des observations",
+    "EXPORT_REPORT": "Exporter le rapport",
+    "OPEN_REPORT": "Ouvrir le rapport",
+    "CLOSE_REPORT": "Fermer le rapport",
+    "NO_NOTES": "Aucune note enregistrée."
   }
 }
+

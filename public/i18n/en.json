@@ -6,6 +6,8 @@
     "PATIENTS": "Patients",
     "SCHEDULE": "Schedule",
     "BILLING": "Billing",
+    "STOCK": "Stock & Inventory",
+    "TREATMENTS": "Treatments",
     "ANALYTICS": "Analytics",
     "SETTINGS": "Settings",
     "LOGOUT": "Logout",
@@ -252,5 +254,30 @@
       "CANCELLED": "Cancelled",
       "NO_SHOW": "No Show"
     }
+  },
+  "ONBOARDING": {
+    "WELCOME_TITLE": "Let's personalize OrthoFlow",
+    "WELCOME_DESC": "Configure your clinic identity in two simple steps. This branding will appear across your invoice templates, reports, and sidebar.",
+    "LIVE_PREVIEW": "Live branding preview",
+    "PREVIEW_SIDEBAR": "Sidebar branding",
+    "PLACEHOLDER_CABINET": "My Clinic Name",
+    "SAMPLE_DATE": "Date: May 17, 2026",
+    "ADDRESS_LABEL": "Full Address",
+    "STEP_IDENTITY": "Identity",
+    "STEP_ENTERPRISE": "Enterprise Settings",
+    "FORM_IDENTITY_TITLE": "Cabinet Information",
+    "FORM_IDENTITY_SUBTITLE": "This forms the visual core of your clinical workspace.",
+    "CABINET_LOGO": "Cabinet Logo",
+    "UPLOAD_PROMPT": "Upload your workspace logo",
+    "UPLOAD_LIMITS": "Supports PNG, JPG, or SVG. Square layout recommended.",
+    "BROWSE_BUTTON": "Browse File",
+    "CABINET_NAME": "Cabinet Name",
+    "NEXT_ENTERPRISE": "Continue to Enterprise Details",
+    "FORM_ENTERPRISE_TITLE": "Enterprise Credentials",
+    "FORM_ENTERPRISE_SUBTITLE": "Provide optional details that will automatically pre-fill your quotes, invoices, and billing receipts.",
+    "COMPLETE_BUTTON": "Complete Onboarding",
+    "CELEBRATE_TITLE": "Workspace Personalized!",
+    "CELEBRATE_DESC": "Welcome to OrthoFlow! {{name}} has been configured as your primary clinical identity.",
+    "REDIRECTING": "Taking you to your dashboard..."
   }
 }

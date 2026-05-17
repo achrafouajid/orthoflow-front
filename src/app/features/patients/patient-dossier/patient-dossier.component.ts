@@ -7,7 +7,7 @@ import { Patient, DentalChartState, DentalChartType, ToothState } from '../../..
 import { DentalChartComponent } from '../../dental-chart/dental-chart.component';
 import { InvoiceService } from '../../billing/services/invoice.service';
 import { Invoice } from '../../billing/models/billing.model';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-patient-dossier',

@@ -6,6 +6,8 @@
     "PATIENTS": "Patients",
     "SCHEDULE": "Agenda",
     "BILLING": "Facturation",
+    "STOCK": "Stock & Inventaire",
+    "TREATMENTS": "Traitements",
     "ANALYTICS": "Analytique",
     "SETTINGS": "Paramètres",
     "LOGOUT": "Déconnexion",
@@ -252,5 +254,30 @@
       "CANCELLED": "Annulé",
       "NO_SHOW": "Non venu"
     }
+  },
+  "ONBOARDING": {
+    "WELCOME_TITLE": "Personnalisons OrthoFlow",
+    "WELCOME_DESC": "Configurez l'identité de votre cabinet en deux étapes simples. Ce logo et ce nom apparaîtront sur vos factures, rapports et barre latérale.",
+    "LIVE_PREVIEW": "Aperçu de la marque en direct",
+    "PREVIEW_SIDEBAR": "Branding de la barre latérale",
+    "PLACEHOLDER_CABINET": "Nom de mon Cabinet",
+    "SAMPLE_DATE": "Date : 17 Mai 2026",
+    "ADDRESS_LABEL": "Adresse complète",
+    "STEP_IDENTITY": "Identité",
+    "STEP_ENTERPRISE": "Paramètres entreprise",
+    "FORM_IDENTITY_TITLE": "Informations du Cabinet",
+    "FORM_IDENTITY_SUBTITLE": "Cela constitue le noyau visuel de votre espace clinique.",
+    "CABINET_LOGO": "Logo du Cabinet",
+    "UPLOAD_PROMPT": "Téléchargez le logo de votre cabinet",
+    "UPLOAD_LIMITS": "Prend en charge PNG, JPG ou SVG. Format carré recommandé.",
+    "BROWSE_BUTTON": "Parcourir",
+    "CABINET_NAME": "Nom du Cabinet",
+    "NEXT_ENTERPRISE": "Continuer vers les détails de l'entreprise",
+    "FORM_ENTERPRISE_TITLE": "Identifiants de l'Entreprise",
+    "FORM_ENTERPRISE_SUBTITLE": "Saisissez des détails facultatifs pour préremplir automatiquement vos devis, factures et reçus.",
+    "COMPLETE_BUTTON": "Terminer la configuration",
+    "CELEBRATE_TITLE": "Espace de travail personnalisé !",
+    "CELEBRATE_DESC": "Bienvenue sur OrthoFlow ! {{name}} a été configuré comme votre identité clinique principale.",
+    "REDIRECTING": "Redirection vers votre tableau de bord..."
   }
 }

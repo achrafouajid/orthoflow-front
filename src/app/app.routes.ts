@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { onboardingGuard } from './core/guards/onboarding.guard';
 
 export const routes: Routes = [
   {
@@ -10,8 +11,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingPageComponent),
   },
   {
+    path: 'onboarding',
+    loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent),
+    canActivate: [onboardingGuard]
+  },
+  {
     path: '',
     loadComponent: () => import('./layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
+    canActivate: [onboardingGuard],
     children: [
       {
         path: '',
@@ -49,6 +56,31 @@ export const routes: Routes = [
       {
         path: 'billing',
         loadChildren: () => import('./features/billing/billing.routes').then(m => m.BILLING_ROUTES),
+      },
+      {
+        path: 'stock',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/stock/pages/stock-dashboard/stock-dashboard.component').then(m => m.StockDashboardComponent),
+          },
+          {
+            path: 'procurement',
+            loadComponent: () => import('./features/stock/pages/purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent),
+          },
+          {
+            path: 'direct-sales',
+            loadComponent: () => import('./features/stock/pages/sales-orders/sales-orders.component').then(m => m.SalesOrdersComponent),
+          },
+          {
+            path: 'treatment-sessions',
+            loadComponent: () => import('./features/stock/pages/treatment-sessions/treatment-sessions.component').then(m => m.TreatmentSessionsComponent),
+          },
+        ]
+      },
+      {
+        path: 'treatments',
+        loadComponent: () => import('./features/treatments/pages/treatments-list/treatments-list.component').then(m => m.TreatmentsListComponent),
       },
     ]
   },

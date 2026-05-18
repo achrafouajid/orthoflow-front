@@ -1,10 +1,25 @@
 services:
   front:
+    container_name: orthoflow-frontend
     build:
       context: .
-    ports:
-      - "4200:4200"
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: npm start -- --host 0.0.0.0 --port 4200
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - proxy
+
+    labels:
+      - "traefik.enable=true"
+
+      # Domain routing
+      - "traefik.http.routers.ortho.rule=Host(`ortho.compaigns.com`)"
+      - "traefik.http.routers.ortho.entrypoints=websecure"
+      - "traefik.http.routers.ortho.tls=true"
+      - "traefik.http.routers.ortho.tls.certresolver=le"
+
+      # ⚠️ Nginx runs on port 80 now
+      - "traefik.http.services.ortho.loadbalancer.server.port=80"
+
+networks:
+  proxy:
+    external: true

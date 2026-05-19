@@ -2,13 +2,14 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Invoice, InvoiceStatus, Payment, Quote, BillingSummary } from '../models/billing.model';
 import { Observable, BehaviorSubject, map, tap, finalize, switchMap, shareReplay } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InvoiceService {
   private http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:8080/api/v1/invoices';
+  private readonly apiUrl = `${environment.apiUrl}/api/v1/invoices`;
 
   // Signals for UI state
   private invoicesSignal = signal<Invoice[]>([]);

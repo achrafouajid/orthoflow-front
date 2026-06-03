@@ -20,6 +20,11 @@ services:
       # ⚠️ Nginx runs on port 80 now
       - "traefik.http.services.ortho.loadbalancer.server.port=80"
 
+  front-dev:
+  build:
+    context: ./frontend
+    args:
+      CONFIG: development
 networks:
   proxy:
     external: true

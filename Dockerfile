@@ -8,7 +8,8 @@ RUN npm ci
 
 COPY . .
 
-RUN npm run build
+ARG CONFIG=production
+RUN npm run build -- --configuration=$CONFIG
 
 # Production stage
 FROM nginx:alpine

@@ -1518,7 +1518,7 @@ export class PatientDossierComponent implements OnInit {
         stockItem: c.stockItem,
         quantityUsed: c.quantityUsed,
         pricePerUnit: c.stockItem.pricePerUse,
-        notes: c.notes || ''
+        notes: ''
       }));
     } else {
       this.formConsumables = [];

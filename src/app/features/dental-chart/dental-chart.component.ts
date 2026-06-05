@@ -430,7 +430,6 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
         doc.text(splitNote, 20, y);
         y += (splitNote.length * 5) + 8;
       }
-      }
     }
 
     // Treatments Section

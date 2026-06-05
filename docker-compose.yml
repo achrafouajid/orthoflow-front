@@ -6,8 +6,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
-      - proxy
-
+      proxy: {}
     labels:
       traefik.enable: "true"
 
@@ -21,11 +20,27 @@ services:
       traefik.http.services.ortho.loadbalancer.server.port: "80"
 
   front-dev:
+    container_name: orthoflow-frontend-dev
     build:
       context: .
       dockerfile: Dockerfile
       args:
         CONFIG: development
+    restart: unless-stopped
+    networks:
+      proxy: {}
+    labels:
+      traefik.enable: "true"
+
+      # Domain routing
+      traefik.http.routers.ortho-dev.rule: "Host(`preprod.ortho.compaigns.com`)"
+      traefik.http.routers.ortho-dev.entrypoints: "websecure"
+      traefik.http.routers.ortho-dev.tls: "true"
+      traefik.http.routers.ortho-dev.tls.certresolver: "le"
+
+      # Nginx runs on port 80
+      traefik.http.services.ortho-dev.loadbalancer.server.port: "80"
+
 networks:
   proxy:
     external: true

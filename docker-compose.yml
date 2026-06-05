@@ -32,14 +32,14 @@ services:
     labels:
       traefik.enable: "true"
 
-      # Domain routing
-      traefik.http.routers.ortho-dev.rule: "Host(`preprod.ortho.compaigns.com`)"
-      traefik.http.routers.ortho-dev.entrypoints: "websecure"
-      traefik.http.routers.ortho-dev.tls: "true"
-      traefik.http.routers.ortho-dev.tls.certresolver: "le"
+      # ROUTER
+      traefik.http.routers.front-dev.rule: "Host(`orthodev.compaigns.com`)"
+      traefik.http.routers.front-dev.entrypoints: "websecure"
+      traefik.http.routers.front-dev.tls: "true"
+      traefik.http.routers.front-dev.tls.certresolver: "le"
 
-      # Nginx runs on port 80
-      traefik.http.services.ortho-dev.loadbalancer.server.port: "80"
+      # SERVICE PORT
+      traefik.http.services.front-dev.loadbalancer.server.port: "80"
 
 networks:
   proxy:

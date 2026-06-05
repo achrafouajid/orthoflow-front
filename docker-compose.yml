@@ -9,22 +9,23 @@ services:
       - proxy
 
     labels:
-      - "traefik.enable=true"
+      traefik.enable: "true"
 
       # Domain routing
-      - "traefik.http.routers.ortho.rule=Host(`ortho.compaigns.com`)"
-      - "traefik.http.routers.ortho.entrypoints=websecure"
-      - "traefik.http.routers.ortho.tls=true"
-      - "traefik.http.routers.ortho.tls.certresolver=le"
+      traefik.http.routers.ortho.rule: "Host(`ortho.compaigns.com`)"
+      traefik.http.routers.ortho.entrypoints: "websecure"
+      traefik.http.routers.ortho.tls: "true"
+      traefik.http.routers.ortho.tls.certresolver: "le"
 
       # ⚠️ Nginx runs on port 80 now
-      - "traefik.http.services.ortho.loadbalancer.server.port=80"
+      traefik.http.services.ortho.loadbalancer.server.port: "80"
 
   front-dev:
-  build:
-    context: ./frontend
-    args:
-      CONFIG: development
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CONFIG: development
 networks:
   proxy:
     external: true

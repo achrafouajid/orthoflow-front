@@ -189,18 +189,21 @@ import { RouterLink } from '@angular/router';
                       <div class="space-y-3">
                         @for (c of draftConsumables; track $index; let idx = $index) {
                           <div class="grid grid-cols-12 gap-3 items-end bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 font-semibold text-xs text-ortho-navy">
-                            <div class="col-span-6">
+                            <div class="col-span-5">
                               <label class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Material Name</label>
-                              <select [(ngModel)]="c.stockItem" (change)="onConsumableItemChange(idx)" [disabled]="!!c.id" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white focus:outline-none">
+                              <select [(ngModel)]="c.stockItem" (change)="onConsumableItemChange(idx)" [disabled]="!!c.id" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white focus:outline-none font-semibold text-ortho-navy">
                                 <option [value]="null">Select item...</option>
                                 @for (item of catalogItems(); track item.id) {
-                                  <option [ngValue]="item">{{ item.name }} (Available: {{ item.currentStock }})</option>
+                                  <option [ngValue]="item">{{ item.name }} (Available: {{ item.currentStock }} {{ item.unit || 'units' }})</option>
                                 }
                               </select>
                             </div>
-                            <div class="col-span-2">
+                            <div class="col-span-3">
                               <label class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Qty Used</label>
-                              <input type="number" [(ngModel)]="c.actualQuantity" (change)="recalculateDraftTotals()" min="0.0001" step="any" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white text-center focus:outline-none font-mono" />
+                              <div class="flex items-center gap-1.5">
+                                <input type="number" [(ngModel)]="c.actualQuantity" (change)="recalculateDraftTotals()" min="0.0001" step="any" class="w-full px-2 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white text-center focus:outline-none font-mono font-bold" />
+                                <span class="text-[10px] font-bold text-ortho-navy/50 font-mono select-none shrink-0">{{ c.stockItem?.unit || 'units' }}</span>
+                              </div>
                             </div>
                             <div class="col-span-3 text-right">
                               <span class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Usage Cost</span>
@@ -506,17 +509,32 @@ export class TreatmentSessionsComponent implements OnInit {
     }));
     draft.discounts = this.draftDiscounts;
 
-    this.stockService.saveTreatmentInvoice(draft).subscribe(savedInvoice => {
-      this.stockService.finalizeTreatmentInvoice(savedInvoice.id!, '00000000-0000-0000-0000-000000000000').subscribe(() => {
-        this.loadAllData();
-        this.closeLogModal();
-      });
+    this.stockService.saveTreatmentInvoice(draft).subscribe({
+      next: (savedInvoice) => {
+        this.stockService.finalizeTreatmentInvoice(savedInvoice.id!, '00000000-0000-0000-0000-000000000000').subscribe({
+          next: () => {
+            this.loadAllData();
+            this.closeLogModal();
+          },
+          error: (err) => {
+            alert(err.error?.message || err.message || 'Error finalizing treatment session. Check stock levels.');
+          }
+        });
+      },
+      error: (err) => {
+        alert(err.error?.message || err.message || 'Error saving draft. Check input values.');
+      }
     });
   }
 
   finalizeInvoice(inv: TreatmentInvoice) {
-    this.stockService.finalizeTreatmentInvoice(inv.id!, '00000000-0000-0000-0000-000000000000').subscribe(() => {
-      this.loadAllData();
+    this.stockService.finalizeTreatmentInvoice(inv.id!, '00000000-0000-0000-0000-000000000000').subscribe({
+      next: () => {
+        this.loadAllData();
+      },
+      error: (err) => {
+        alert(err.error?.message || err.message || 'Error finalizing treatment session. Check stock levels.');
+      }
     });
   }
 

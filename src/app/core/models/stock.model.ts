@@ -37,6 +37,9 @@ export interface StockItem {
   category: StockCategory;
   /** Unit of Measure (BR04) */
   unitOfMeasure?: UnitOfMeasure;
+  unit?: string;
+  unitLabel?: string;
+  decimalSupported?: boolean;
   supplier?: Supplier;
   /** Current Quantity */
   currentStock: number;

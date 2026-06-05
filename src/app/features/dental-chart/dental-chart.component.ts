@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { DentalChartService } from '../../core/services/dental-chart.service';
 import { ToothState, ToothStatus, DentalChartType } from '../../core/models/patient.model';
+import { PatientTreatment } from '../../core/models/patient-treatment.model';
 import { ADULT_SVG, CHILD_SVG } from './dental-chart-svg-data';
 
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -155,6 +156,7 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() patientId = '';
   @Input() teeth: Record<string, ToothState> = {};
   @Input() interactive = true;
+  @Input() patientTreatments: PatientTreatment[] = [];
 
   @Output() toothSelected = new EventEmitter<ToothState>();
   @Output() toothHovered = new EventEmitter<ToothState | null>();
@@ -202,8 +204,11 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
       this.updateSvgContent();
       this.initChart();
     }
-    if (changes['teeth'] && this.chartContainer) {
-      setTimeout(() => this.applyAllToothColors(), 0);
+    if ((changes['teeth'] || changes['patientTreatments']) && this.chartContainer) {
+      setTimeout(() => {
+        this.applyAllToothColors();
+        this.applyTreatmentIndicators();
+      }, 0);
     }
   }
 
@@ -214,6 +219,7 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
     setTimeout(() => {
       this.attachToothListeners();
       this.applyAllToothColors();
+      this.applyTreatmentIndicators();
     }, 150); // Increased delay for SVG rendering
   }
 
@@ -424,6 +430,58 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
         doc.text(splitNote, 20, y);
         y += (splitNote.length * 5) + 8;
       }
+      }
+    }
+
+    // Treatments Section
+    if (this.patientTreatments && this.patientTreatments.length > 0) {
+      if (y > 230) {
+        doc.addPage();
+        y = 20;
+      } else {
+        y += 10;
+      }
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text('CLINICAL TREATMENTS HISTORY', 20, y);
+      doc.setDrawColor(79, 70, 229);
+      doc.line(20, y + 2, 90, y + 2);
+      y += 10;
+
+      for (const t of this.patientTreatments) {
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setFontSize(10);
+        doc.setTextColor(79, 70, 229);
+        doc.text(`${t.treatment.name} (Teeth: ${t.teeth})`, 20, y);
+        y += 5;
+
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Status: ${t.status} | Progress: ${t.progress}% | Doctor: ${t.doctorName || 'N/A'}`, 20, y);
+        y += 4;
+
+        if (t.notes) {
+          doc.setTextColor(30, 41, 59);
+          const splitNote = doc.splitTextToSize(`Notes: ${t.notes}`, pageWidth - 40);
+          doc.text(splitNote, 20, y);
+          y += (splitNote.length * 4.5);
+        }
+
+        if (t.consumables && t.consumables.length > 0) {
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          const materials = t.consumables.map(c => `${c.stockItem.name} (${c.quantityUsed} ${c.stockItem.unitLabel || 'Units'})`).join(', ');
+          const splitMaterials = doc.splitTextToSize(`Materials Consumed: ${materials}`, pageWidth - 40);
+          doc.text(splitMaterials, 20, y);
+          y += (splitMaterials.length * 4.5);
+        }
+
+        y += 5;
+      }
     }
 
     // Footer on last page
@@ -533,5 +591,31 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
         });
       }
     }
+  }
+
+  private applyTreatmentIndicators() {
+    if (!this.chartContainer || !this.patientTreatments) return;
+    const prefix = this.getToothPrefix();
+
+    this.patientTreatments.forEach(pt => {
+      if (!pt.teeth) return;
+      const teethIds = pt.teeth.split(',').map(t => t.trim());
+      
+      teethIds.forEach(toothId => {
+        const el = this.chartContainer?.nativeElement.querySelector(`.${prefix}${toothId}-parent`) as HTMLElement;
+        if (!el) return;
+
+        if (pt.status === 'COMPLETED') {
+          el.style.stroke = '#10b981';
+          el.style.strokeWidth = '3px';
+        } else if (pt.status === 'ACTIVE') {
+          el.style.stroke = '#f59e0b';
+          el.style.strokeWidth = '3px';
+        } else if (pt.status === 'PLANNED') {
+          el.style.stroke = '#3b82f6';
+          el.style.strokeWidth = '2px';
+        }
+      });
+    });
   }
 }

@@ -172,7 +172,7 @@ import { RouterLink } from '@angular/router';
                     <td class="p-4 text-center">
                       <div class="flex items-center justify-center gap-2">
                         <span class="font-bold" [class.text-red-500]="item.currentStock === 0" [class.text-amber-500]="item.currentStock > 0 && item.currentStock <= item.minimumStock" [class.text-emerald-600]="item.currentStock > item.minimumStock">
-                          {{ item.currentStock }}
+                          {{ item.currentStock }} {{ item.unit || 'units' }}
                         </span>
                         @if (item.currentStock === 0) {
                           <span class="px-1.5 py-0.5 text-[9px] font-bold bg-red-50 text-red-500 rounded border border-red-200 uppercase">Empty</span>
@@ -573,6 +573,27 @@ import { RouterLink } from '@angular/router';
 
               <div class="grid grid-cols-2 gap-4">
                 <div>
+                  <label class="block text-xs font-bold text-ortho-navy/60 uppercase tracking-wide mb-1">Unit of Measurement (UOM) *</label>
+                  <select [(ngModel)]="itemForm.unit" name="unit" required class="w-full px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-ortho-navy transition bg-white">
+                    <option value="Unit(s)">Unit(s)</option>
+                    <option value="ml">ml</option>
+                    <option value="L">L</option>
+                    <option value="g">g</option>
+                    <option value="kg">kg</option>
+                    <option value="Box">Box</option>
+                    <option value="Pack">Pack</option>
+                  </select>
+                </div>
+                <div class="flex items-center pt-5">
+                  <label class="flex items-center gap-2 text-xs font-bold text-ortho-navy/60 uppercase tracking-wide cursor-pointer select-none">
+                    <input type="checkbox" [(ngModel)]="itemForm.decimalSupported" name="decimalSupported" class="w-4 h-4 rounded border-gray-300 text-ortho-navy focus:ring-ortho-navy" />
+                    Decimal Qty Support
+                  </label>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
                   <label class="block text-xs font-bold text-ortho-navy/60 uppercase tracking-wide mb-1">Cabinet Storage Location</label>
                   <input type="text" [(ngModel)]="itemForm.location" placeholder="e.g. Cabinet A, Cabinet B" name="location" class="w-full px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-ortho-navy transition bg-white" />
                 </div>
@@ -606,7 +627,7 @@ import { RouterLink } from '@angular/router';
               <div>
                 <span class="text-xs text-ortho-navy/40 font-bold block mb-1 uppercase tracking-wider">Stock Item</span>
                 <span class="font-bold text-ortho-navy block text-base">{{ selectedItem()?.name }}</span>
-                <span class="text-xs text-ortho-navy/60 block font-medium">Current Stock: {{ selectedItem()?.currentStock }} units</span>
+                <span class="text-xs text-ortho-navy/60 block font-medium">Current Stock: {{ selectedItem()?.currentStock }} {{ selectedItem()?.unit || 'units' }}</span>
               </div>
               
               <div>
@@ -881,6 +902,9 @@ export class StockDashboardComponent implements OnInit {
       name: '',
       sku: '',
       category: 'CONSUMABLES',
+      unit: 'Unit(s)',
+      unitLabel: 'Unit(s)',
+      decimalSupported: false,
       currentStock: 0,
       minimumStock: 5,
       purchasePrice: 0,
@@ -905,6 +929,11 @@ export class StockDashboardComponent implements OnInit {
   saveItem() {
     if (!this.itemForm.name || !this.itemForm.sku || !this.itemForm.purchasePrice || !this.itemForm.unitSize) {
       return;
+    }
+
+    // Set unitLabel to match unit value
+    if (this.itemForm.unit) {
+      this.itemForm.unitLabel = this.itemForm.unit;
     }
 
     // Find and attach supplier if selected

@@ -2,14 +2,17 @@ import { Patient } from './patient.model';
 
 // ─── Category & Unit ────────────────────────────────────────────────────────
 
+/**
+ * Matches the backend StockCategory enum exactly.
+ * Values: ANESTHESIA | CONSUMABLES | ORTHODONTIC_PARTS | HYGIENE | INSTRUMENTS | MEDICATION
+ */
 export type StockCategory =
-  | 'BRACKETS'
-  | 'WIRES'
-  | 'ELASTICS'
-  | 'INSTRUMENTS'
+  | 'ANESTHESIA'
   | 'CONSUMABLES'
+  | 'ORTHODONTIC_PARTS'
   | 'HYGIENE'
-  | 'OTHER';
+  | 'INSTRUMENTS'
+  | 'MEDICATION';
 
 export type UnitOfMeasure = 'UNIT' | 'BOX' | 'BOTTLE' | 'PACK' | 'ML' | 'MG' | 'ROLL' | 'PAIR';
 
@@ -378,3 +381,62 @@ export interface TopConsumedItem {
   totalConsumed: number;
   totalCost: number;
 }
+
+// ─── Query / Filter DTOs (sent as HTTP query params) ─────────────────────────
+
+/**
+ * Query params for GET /stock/items.
+ * All fields are optional — omitted fields fall back to server defaults.
+ */
+export interface StockItemQuery {
+  /** Free-text search on item name or SKU. */
+  search?: string;
+  /** StockCategory enum value to filter by. Omit or set to 'ALL' for no filter. */
+  category?: string;
+  /** Column to sort by. Backend-allowed values: name, sku, category,
+   *  currentStock, minimumStock, purchasePrice, pricePerUse, createdAt. */
+  sortBy?: string;
+  /** Sort direction. */
+  sortDir?: 'ASC' | 'DESC';
+}
+
+/**
+ * Query params for GET /stock/movements.
+ * All fields are optional — omitted fields fall back to server defaults.
+ */
+export interface StockMovementQuery {
+  /** Free-text search on item name, SKU or source reference. */
+  search?: string;
+  /** MovementType enum value to filter by. Omit or set to 'ALL' for no filter. */
+  movementType?: string;
+  /** Column to sort by. Backend-allowed values: createdAt, movementType,
+   *  quantity, quantityBefore, quantityAfter, sourceType, sourceReference. */
+  sortBy?: string;
+  /** Sort direction. */
+  sortDir?: 'ASC' | 'DESC';
+}
+
+/** All backend StockCategory values as an ordered array for use in selects. */
+export const STOCK_CATEGORIES: { value: string; label: string }[] = [
+  { value: 'ALL',               label: 'All Categories'     },
+  { value: 'ANESTHESIA',        label: 'Anesthesia'         },
+  { value: 'CONSUMABLES',       label: 'Consumables'        },
+  { value: 'ORTHODONTIC_PARTS', label: 'Orthodontic Parts'  },
+  { value: 'HYGIENE',           label: 'Hygiene'            },
+  { value: 'INSTRUMENTS',       label: 'Instruments'        },
+  { value: 'MEDICATION',        label: 'Medication'         },
+];
+
+/** All backend MovementType values for use in selects. */
+export const MOVEMENT_TYPES: { value: string; label: string }[] = [
+  { value: 'ALL',                         label: 'All Types'                   },
+  { value: 'IN',                          label: 'IN — Stock Receipt'          },
+  { value: 'OUT',                         label: 'OUT — Consumption'           },
+  { value: 'ADJUSTMENT',                  label: 'Adjustment'                  },
+  { value: 'RETURN',                      label: 'Return'                      },
+  { value: 'WRITE_OFF',                   label: 'Write-Off'                   },
+  { value: 'PURCHASE_RECEIPT',            label: 'Purchase Receipt'            },
+  { value: 'VENDOR_INVOICE_ADJUSTMENT',   label: 'Vendor Invoice Adjustment'   },
+  { value: 'TREATMENT_CONSUMPTION',       label: 'Treatment Consumption'       },
+  { value: 'INVENTORY_COUNT_ADJUSTMENT',  label: 'Inventory Count Adjustment'  },
+];

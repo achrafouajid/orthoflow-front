@@ -1,10 +1,13 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { StockService } from '../../../../core/services/stock.service';
-import { StockItem, Supplier, StockMovement, StockCategory, MovementType } from '../../../../core/models/stock.model';
-
+import {
+  StockItem, Supplier, StockMovement, MovementType,
+  STOCK_CATEGORIES, MOVEMENT_TYPES
+} from '../../../../core/models/stock.model';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -115,47 +118,66 @@ import { RouterLink } from '@angular/router';
         <!-- Catalog Tab -->
         <div class="bg-white rounded-2xl border border-ortho-navy/5 shadow-sm overflow-hidden">
           
-          <!-- Filters & Search Bar -->
+                <!-- Filters & Search Bar -->
           <div class="p-4 border-b border-ortho-navy/5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-ortho-navy/[0.01]">
             <div class="relative max-w-md w-full">
               <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-ortho-navy/40">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               </span>
-              <input type="text" [(ngModel)]="searchQuery" placeholder="Search catalog by name, SKU or location..." class="w-full pl-10 pr-4 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-ortho-navy transition" />
+              <input
+                id="catalog-search"
+                type="text"
+                [ngModel]="catalogSearchValue"
+                (ngModelChange)="onCatalogSearchChange($event)"
+                placeholder="Search by name or SKU..."
+                class="w-full pl-10 pr-4 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-ortho-navy transition"
+              />
             </div>
-            
+
             <div class="flex items-center gap-3 self-end">
-              <select [(ngModel)]="selectedCategory" class="px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm bg-white focus:outline-none focus:border-ortho-navy transition">
-                <option value="ALL">All Categories</option>
-                <option value="BRACKETS">Brackets</option>
-                <option value="WIRES">Wires</option>
-                <option value="ELASTICS">Elastics</option>
-                <option value="INSTRUMENTS">Instruments</option>
-                <option value="CONSUMABLES">Consumables</option>
-                <option value="HYGIENE">Hygiene</option>
-                <option value="OTHER">Other</option>
+              <select
+                id="catalog-category"
+                [ngModel]="catalogCategory()"
+                (ngModelChange)="onCatalogCategoryChange($event)"
+                class="px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm bg-white focus:outline-none focus:border-ortho-navy transition"
+              >
+                @for (cat of stockCategories; track cat.value) {
+                  <option [value]="cat.value">{{ cat.label }}</option>
+                }
               </select>
             </div>
           </div>
 
-          <!-- Catalog Table -->
+                    <!-- Catalog Table -->
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-sm">
               <thead>
                 <tr class="bg-ortho-navy/[0.02] text-ortho-navy/60 font-semibold border-b border-ortho-navy/5">
-                  <th class="p-4">SKU / Code</th>
-                  <th class="p-4">Item Name</th>
-                  <th class="p-4">Category</th>
-                  <th class="p-4 text-center">Available Stock</th>
-                  <th class="p-4 text-right">Unit cost</th>
-                  <th class="p-4 text-right">Usage Cost</th>
+                  <th class="p-4 cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortCatalog('sku')">
+                    <span class="flex items-center gap-1">SKU / Code <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('catalog','sku') }}</span></span>
+                  </th>
+                  <th class="p-4 cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortCatalog('name')">
+                    <span class="flex items-center gap-1">Item Name <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('catalog','name') }}</span></span>
+                  </th>
+                  <th class="p-4 cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortCatalog('category')">
+                    <span class="flex items-center gap-1">Category <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('catalog','category') }}</span></span>
+                  </th>
+                  <th class="p-4 text-center cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortCatalog('currentStock')">
+                    <span class="flex items-center justify-center gap-1">Available Stock <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('catalog','currentStock') }}</span></span>
+                  </th>
+                  <th class="p-4 text-right cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortCatalog('purchasePrice')">
+                    <span class="flex items-center justify-end gap-1">Unit cost <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('catalog','purchasePrice') }}</span></span>
+                  </th>
+                  <th class="p-4 text-right cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortCatalog('pricePerUse')">
+                    <span class="flex items-center justify-end gap-1">Usage Cost <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('catalog','pricePerUse') }}</span></span>
+                  </th>
                   <th class="p-4">Supplier</th>
                   <th class="p-4">Location</th>
                   <th class="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-ortho-navy/5">
-                @for (item of filteredItems(); track item.id) {
+                @for (item of items(); track item.id) {
                   <tr class="hover:bg-ortho-navy/[0.01] transition">
                     <td class="p-4 font-mono text-xs font-semibold text-ortho-navy/70">{{ item.sku }}</td>
                     <td class="p-4">
@@ -210,26 +232,68 @@ import { RouterLink } from '@angular/router';
         </div>
 
       } @else if (activeTab() === 'movements') {
-        
+
         <!-- Movements Audit Ledger -->
         <div class="bg-white rounded-2xl border border-ortho-navy/5 shadow-sm overflow-hidden">
-          
-          <div class="p-4 border-b border-ortho-navy/5 bg-ortho-navy/[0.01] flex items-center justify-between">
-            <h3 class="text-base font-bold text-ortho-navy">Stock Audit Ledger</h3>
-            <span class="text-xs text-ortho-navy/40 font-medium">Real-time consumption & inventory additions log.</span>
+
+          <!-- Movements filter bar -->
+          <div class="p-4 border-b border-ortho-navy/5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-ortho-navy/[0.01]">
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-ortho-navy">Stock Audit Ledger</h3>
+              <span class="text-xs text-ortho-navy/40 font-medium hidden md:inline">Real-time consumption &amp; inventory additions log.</span>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+              <div class="relative w-full sm:w-64">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-ortho-navy/40">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </span>
+                <input
+                  id="movements-search"
+                  type="text"
+                  [ngModel]="movSearchValue"
+                  (ngModelChange)="onMovSearchChange($event)"
+                  placeholder="Search item name, SKU, ref..."
+                  class="w-full pl-9 pr-3 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-ortho-navy transition"
+                />
+              </div>
+              <select
+                id="movements-type"
+                [ngModel]="movType()"
+                (ngModelChange)="onMovTypeChange($event)"
+                class="px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm bg-white focus:outline-none focus:border-ortho-navy transition w-full sm:w-auto"
+              >
+                @for (t of movementTypes; track t.value) {
+                  <option [value]="t.value">{{ t.label }}</option>
+                }
+              </select>
+            </div>
           </div>
 
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-sm">
               <thead>
                 <tr class="bg-ortho-navy/[0.02] text-ortho-navy/60 font-semibold border-b border-ortho-navy/5">
-                  <th class="p-4">Timestamp</th>
-                  <th class="p-4">Item Name / SKU</th>
-                  <th class="p-4">Type</th>
-                  <th class="p-4 text-center">Qty Delta</th>
-                  <th class="p-4 text-center">Before</th>
-                  <th class="p-4 text-center">After</th>
-                  <th class="p-4">Source Reference</th>
+                  <th class="p-4 cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortMovements('createdAt')">
+                    <span class="flex items-center gap-1">Timestamp <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('mov','createdAt') }}</span></span>
+                  </th>
+                  <th class="p-4 cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortMovements('stockItem')">
+                    <span class="flex items-center gap-1">Item Name / SKU <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('mov','stockItem') }}</span></span>
+                  </th>
+                  <th class="p-4 cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortMovements('movementType')">
+                    <span class="flex items-center gap-1">Type <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('mov','movementType') }}</span></span>
+                  </th>
+                  <th class="p-4 text-center cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortMovements('quantity')">
+                    <span class="flex items-center justify-center gap-1">Qty Delta <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('mov','quantity') }}</span></span>
+                  </th>
+                  <th class="p-4 text-center cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortMovements('quantityBefore')">
+                    <span class="flex items-center justify-center gap-1">Before <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('mov','quantityBefore') }}</span></span>
+                  </th>
+                  <th class="p-4 text-center cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortMovements('quantityAfter')">
+                    <span class="flex items-center justify-center gap-1">After <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('mov','quantityAfter') }}</span></span>
+                  </th>
+                  <th class="p-4 cursor-pointer select-none hover:text-ortho-navy transition group" (click)="sortMovements('sourceReference')">
+                    <span class="flex items-center gap-1">Source Reference <span class="opacity-50 group-hover:opacity-100">{{ getSortIcon('mov','sourceReference') }}</span></span>
+                  </th>
                   <th class="p-4">Notes</th>
                 </tr>
               </thead>
@@ -529,13 +593,9 @@ import { RouterLink } from '@angular/router';
                 <div>
                   <label class="block text-xs font-bold text-ortho-navy/60 uppercase tracking-wide mb-1">Category *</label>
                   <select [(ngModel)]="itemForm.category" name="category" required class="w-full px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-ortho-navy transition bg-white">
-                    <option value="BRACKETS">Brackets</option>
-                    <option value="WIRES">Wires</option>
-                    <option value="ELASTICS">Elastics</option>
-                    <option value="INSTRUMENTS">Instruments</option>
-                    <option value="CONSUMABLES">Consumables</option>
-                    <option value="HYGIENE">Hygiene</option>
-                    <option value="OTHER">Other</option>
+                    @for (cat of stockCategoriesNoAll; track cat.value) {
+                      <option [value]="cat.value">{{ cat.label }}</option>
+                    }
                   </select>
                 </div>
                 <div>
@@ -708,11 +768,11 @@ import { RouterLink } from '@angular/router';
     }
   `]
 })
-export class StockDashboardComponent implements OnInit {
+export class StockDashboardComponent implements OnInit, OnDestroy {
   private stockService = inject(StockService);
 
   readonly activeTab = signal<'catalog' | 'movements' | 'suppliers' | 'reconciliation'>('catalog');
-  
+
   // Data Signals
   readonly items = signal<StockItem[]>([]);
   readonly movements = signal<StockMovement[]>([]);
@@ -722,9 +782,29 @@ export class StockDashboardComponent implements OnInit {
   physicalCountsMap: { [itemId: string]: { physicalQuantity: number; notes: string } } = {};
   reconciliationNotes = '';
 
-  // Search & Filter
-  searchQuery = '';
-  selectedCategory = 'ALL';
+  // ── Catalog tab sort/filter state ─────────────────────────────────────────
+  readonly catalogSortBy = signal<string>('name');
+  readonly catalogSortDir = signal<'ASC' | 'DESC'>('ASC');
+  readonly catalogCategory = signal<string>('ALL');
+  /** Raw input value, not debounced — bound via (ngModelChange) */
+  catalogSearchValue = '';
+  private readonly catalogSearch$ = new Subject<string>();
+
+  // ── Movements tab sort/filter state ───────────────────────────────────────
+  readonly movSortBy = signal<string>('createdAt');
+  readonly movSortDir = signal<'ASC' | 'DESC'>('DESC');
+  readonly movType = signal<string>('ALL');
+  movSearchValue = '';
+  private readonly movSearch$ = new Subject<string>();
+
+  // ── Constant option lists (driven by backend enum values) ─────────────────
+  readonly stockCategories = STOCK_CATEGORIES;
+  /** Same as stockCategories but without the 'ALL' entry — for the item form modal. */
+  readonly stockCategoriesNoAll = STOCK_CATEGORIES.filter(c => c.value !== 'ALL');
+  readonly movementTypes = MOVEMENT_TYPES;
+
+  // ── Destroy notifier ──────────────────────────────────────────────────────
+  private readonly destroy$ = new Subject<void>();
 
   // Modal controls
   readonly showItemModal = signal(false);
@@ -747,51 +827,129 @@ export class StockDashboardComponent implements OnInit {
   readonly kpiTotalItems = computed(() => this.items().length);
   readonly kpiOutOfStock = computed(() => this.items().filter(i => i.currentStock === 0).length);
   readonly kpiLowStock = computed(() => this.items().filter(i => i.currentStock > 0 && i.currentStock <= i.minimumStock).length);
-  readonly kpiValuation = computed(() => 
+  readonly kpiValuation = computed(() =>
     this.items().reduce((acc, curr) => acc + (curr.currentStock * curr.purchasePrice), 0)
   );
 
-  // Filtered Catalog Items
-  readonly filteredItems = computed(() => {
-    let list = this.items();
-    
-    // Category filter
-    if (this.selectedCategory !== 'ALL') {
-      list = list.filter(i => i.category === this.selectedCategory);
-    }
 
-    // Search query filter
-    if (this.searchQuery.trim()) {
-      const q = this.searchQuery.toLowerCase().trim();
-      list = list.filter(i => 
-        i.name.toLowerCase().includes(q) || 
-        i.sku.toLowerCase().includes(q) ||
-        (i.location && i.location.toLowerCase().includes(q))
-      );
-    }
-
-    return list;
-  });
 
   ngOnInit() {
+    // Wire debounced search for catalog
+    this.catalogSearch$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(q => {
+        this.catalogSearchValue = q;
+        this.reloadCatalog();
+      });
+
+    // Wire debounced search for movements
+    this.movSearch$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(q => {
+        this.movSearchValue = q;
+        this.reloadMovements();
+      });
+
     this.loadAllData();
   }
 
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadAllData() {
-    this.stockService.getStockItems().subscribe(data => this.items.set(data));
-    this.stockService.getAllMovements().subscribe(data => {
-      // Sort newest movements first
-      this.movements.set(data.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
-    });
+    this.reloadCatalog();
+    this.reloadMovements();
     this.stockService.getSuppliers().subscribe(data => this.suppliers.set(data));
     this.loadReconciliationData();
+  }
+
+  /** Fetches stock items using current catalog sort/filter signals. */
+  private reloadCatalog() {
+    this.stockService.getStockItems({
+      search: this.catalogSearchValue.trim() || undefined,
+      category: this.catalogCategory() !== 'ALL' ? this.catalogCategory() : undefined,
+      sortBy: this.catalogSortBy(),
+      sortDir: this.catalogSortDir(),
+    }).subscribe(data => this.items.set(data));
+  }
+
+  /** Fetches movements using current movements sort/filter signals. */
+  private reloadMovements() {
+    this.stockService.getAllMovements({
+      search: this.movSearchValue.trim() || undefined,
+      movementType: this.movType() !== 'ALL' ? this.movType() : undefined,
+      sortBy: this.movSortBy(),
+      sortDir: this.movSortDir(),
+    }).subscribe(data => this.movements.set(data));
+  }
+
+  // ── Sort helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * Toggle sort on the Catalog table.
+   * Clicking the same column flips direction; clicking a new column resets to ASC.
+   */
+  sortCatalog(column: string) {
+    if (this.catalogSortBy() === column) {
+      this.catalogSortDir.set(this.catalogSortDir() === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      this.catalogSortBy.set(column);
+      this.catalogSortDir.set('ASC');
+    }
+    this.reloadCatalog();
+  }
+
+  /** Toggle sort on the Movements audit ledger. */
+  sortMovements(column: string) {
+    if (this.movSortBy() === column) {
+      this.movSortDir.set(this.movSortDir() === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      this.movSortBy.set(column);
+      this.movSortDir.set('ASC');
+    }
+    this.reloadMovements();
+  }
+
+  /**
+   * Returns the sort icon character for a given table + column.
+   * Active column shows solid arrow; inactive shows neutral double-arrow.
+   */
+  getSortIcon(table: 'catalog' | 'mov', column: string): string {
+    const activeCol = table === 'catalog' ? this.catalogSortBy() : this.movSortBy();
+    const activeDir = table === 'catalog' ? this.catalogSortDir() : this.movSortDir();
+    if (activeCol !== column) return '↕';
+    return activeDir === 'ASC' ? '↑' : '↓';
+  }
+
+  // ── Search & filter change handlers ───────────────────────────────────────
+
+  onCatalogSearchChange(value: string) {
+    this.catalogSearchValue = value;
+    this.catalogSearch$.next(value);
+  }
+
+  onCatalogCategoryChange(value: string) {
+    this.catalogCategory.set(value);
+    this.reloadCatalog();
+  }
+
+  onMovSearchChange(value: string) {
+    this.movSearchValue = value;
+    this.movSearch$.next(value);
+  }
+
+  onMovTypeChange(value: string) {
+    this.movType.set(value);
+    this.reloadMovements();
   }
 
   loadReconciliationData() {
     this.stockService.getCountSessions().subscribe(data => {
       const sorted = (data || []).sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
       this.countSessions.set(sorted);
-      
+
       const active = sorted.find(s => s.status === 'OPEN' || s.status === 'IN_PROGRESS');
       if (active) {
         this.activeCountSession.set(active);
@@ -948,12 +1106,13 @@ export class StockDashboardComponent implements OnInit {
 
     if (this.editMode()) {
       this.stockService.updateStockItem(this.itemForm.id!, this.itemForm).subscribe(() => {
-        this.loadAllData();
+        // Reload catalog preserving active sort/filter state
+        this.reloadCatalog();
         this.closeItemModal();
       });
     } else {
       this.stockService.createStockItem(this.itemForm).subscribe(() => {
-        this.loadAllData();
+        this.reloadCatalog();
         this.closeItemModal();
       });
     }
@@ -962,7 +1121,8 @@ export class StockDashboardComponent implements OnInit {
   deleteItem(item: StockItem) {
     if (confirm(`Are you sure you want to delete '${item.name}' from the catalog?`)) {
       this.stockService.deleteStockItem(item.id).subscribe(() => {
-        this.loadAllData();
+        // Reload catalog preserving active sort/filter state
+        this.reloadCatalog();
       });
     }
   }
@@ -987,7 +1147,10 @@ export class StockDashboardComponent implements OnInit {
     }
 
     this.stockService.adjustStock(item.id, this.adjustmentQty, this.adjustmentReason).subscribe(() => {
-      this.loadAllData();
+      // Reload both catalog (updated stock level) and movements (new ledger entry)
+      // while preserving the active sort/filter state on each table.
+      this.reloadCatalog();
+      this.reloadMovements();
       this.closeAdjustmentModal();
     });
   }

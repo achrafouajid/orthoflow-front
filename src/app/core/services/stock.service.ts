@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   StockItem,
+  StockItemQuery,
   Supplier,
   Treatment,
   PurchaseOrder,
@@ -12,6 +13,7 @@ import {
   SalesOrder,
   TreatmentInvoice,
   StockMovement,
+  StockMovementQuery,
   CountSession,
   InventoryKPI,
   TreatmentProfitability,
@@ -25,8 +27,18 @@ export class StockService {
 
   // ─── Stock Items (BR04) ────────────────────────────────────────────────────
 
-  getStockItems(): Observable<StockItem[]> {
-    return this.http.get<StockItem[]>(`${this.baseUrl}/items`);
+  /**
+   * Returns stock items from the server, optionally filtered and sorted.
+   * All filter params are optional; the server applies sensible defaults.
+   */
+  getStockItems(filter?: StockItemQuery): Observable<StockItem[]> {
+    let params = new HttpParams();
+    if (filter?.search)    params = params.set('search',   filter.search);
+    if (filter?.category && filter.category !== 'ALL')
+                           params = params.set('category', filter.category);
+    if (filter?.sortBy)    params = params.set('sortBy',   filter.sortBy);
+    if (filter?.sortDir)   params = params.set('sortDir',  filter.sortDir);
+    return this.http.get<StockItem[]>(`${this.baseUrl}/items`, { params });
   }
 
   getStockItem(id: string): Observable<StockItem> {
@@ -78,8 +90,18 @@ export class StockService {
 
   // ─── Stock Movements Ledger (BR06) ────────────────────────────────────────
 
-  getAllMovements(): Observable<StockMovement[]> {
-    return this.http.get<StockMovement[]>(`${this.baseUrl}/movements`);
+  /**
+   * Returns stock movements, optionally filtered and sorted.
+   * Defaults: sortBy=createdAt DESC (newest first).
+   */
+  getAllMovements(filter?: StockMovementQuery): Observable<StockMovement[]> {
+    let params = new HttpParams();
+    if (filter?.search)        params = params.set('search',       filter.search);
+    if (filter?.movementType && filter.movementType !== 'ALL')
+                               params = params.set('movementType', filter.movementType);
+    if (filter?.sortBy)        params = params.set('sortBy',       filter.sortBy);
+    if (filter?.sortDir)       params = params.set('sortDir',      filter.sortDir);
+    return this.http.get<StockMovement[]>(`${this.baseUrl}/movements`, { params });
   }
 
   getItemMovements(itemId: string): Observable<StockMovement[]> {

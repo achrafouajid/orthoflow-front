@@ -1,0 +1,474 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 46825,
+      "max": [
+        3.49025821685791,
+        4.091050148010254,
+        6.797249794006348
+      ],
+      "min": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 561900,
+      "componentType": 5126,
+      "count": 46825,
+      "max": [
+        0.9999796748161316,
+        0.9999938011169434,
+        0.999912440776825
+      ],
+      "min": [
+        -0.9999991059303284,
+        -0.9999735355377197,
+        -0.9997670650482178
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 46825,
+      "max": [
+        0.9993137717247009,
+        0.9999521374702454,
+        0.9999261498451233,
+        -1.0
+      ],
+      "min": [
+        -0.9998815655708313,
+        -0.9999967813491821,
+        -0.9999147653579712,
+        -1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 46825,
+      "max": [
+        0.9980400204658508,
+        0.9980400204658508
+      ],
+      "min": [
+        0.04010999947786331,
+        0.0019499999471008778
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 279744,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 1123800,
+      "componentType": 5126,
+      "count": 889,
+      "max": [
+        1.9004087448120117,
+        3.544062852859497,
+        0.3927497863769531
+      ],
+      "min": [
+        0.8853559494018555,
+        0.4427504539489746,
+        0.028100013732910156
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 1134468,
+      "componentType": 5126,
+      "count": 889,
+      "max": [
+        0.940732479095459,
+        0.9996581673622131,
+        0.9803569316864014
+      ],
+      "min": [
+        -0.9951155781745911,
+        -0.9998711347579956,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 374600,
+      "componentType": 5126,
+      "count": 889,
+      "max": [
+        0.9980400204658508,
+        26.066890716552734
+      ],
+      "min": [
+        -58.65790939331055,
+        0.0019499999471008778
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 1118976,
+      "componentType": 5125,
+      "count": 1893,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 1145136,
+      "componentType": 5126,
+      "count": 3254,
+      "max": [
+        2.7027463912963867,
+        3.6065759658813477,
+        4.598607063293457
+      ],
+      "min": [
+        0.8184661865234375,
+        0.4044342041015625,
+        0.03472423553466797
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 1184184,
+      "componentType": 5126,
+      "count": 3254,
+      "max": [
+        0.9996629953384399,
+        0.999422550201416,
+        0.9999898076057434
+      ],
+      "min": [
+        -0.9994930028915405,
+        -0.9997493624687195,
+        -0.9998571276664734
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 381712,
+      "componentType": 5126,
+      "count": 3254,
+      "max": [
+        52.7524299621582,
+        92.3640365600586
+      ],
+      "min": [
+        -58.64854049682617,
+        -51.37841033935547
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 1126548,
+      "componentType": 5125,
+      "count": 17043,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "University of Dundee, School of Dentistry (https://sketchfab.com/DundeeDental)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/maxillary-first-molar-with-cusp-of-carabelli-9117c7a9bf0848f29bc4e85931697e7b",
+      "title": "Maxillary First Molar with Cusp of Carabelli"
+    },
+    "generator": "Sketchfab-15.11.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 1194720,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 407744,
+      "byteOffset": 1194720,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1223232,
+      "byteOffset": 1602464,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 749200,
+      "byteOffset": 2825696,
+      "byteStride": 16,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 3574896,
+      "uri": "scene.bin"
+    }
+  ],
+  "extensionsUsed": [
+    "KHR_materials_specular"
+  ],
+  "images": [
+    {
+      "uri": "textures/defaultMat_baseColor.jpeg"
+    },
+    {
+      "uri": "textures/defaultMat_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/defaultMat_normal.png"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "extensions": {
+        "KHR_materials_specular": {
+          "specularColorFactor": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "specularFactor": 0.07
+        }
+      },
+      "name": "defaultMat",
+      "normalTexture": {
+        "index": 2,
+        "scale": 0.0
+      },
+      "occlusionTexture": {
+        "index": 1,
+        "strength": 0.26
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0,
+        "metallicRoughnessTexture": {
+          "index": 1
+        },
+        "roughnessFactor": 0.23
+      }
+    },
+    {
+      "doubleSided": true,
+      "extensions": {
+        "KHR_materials_specular": {
+          "specularColorFactor": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "specularFactor": 0.01
+        }
+      },
+      "name": "defaultMat_0",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.8,
+          0.8,
+          0.8,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.27
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Object_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TANGENT": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 4,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Object_1",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 6,
+            "POSITION": 5,
+            "TEXCOORD_0": 7
+          },
+          "indices": 8,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Object_2",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 10,
+            "POSITION": 9,
+            "TEXCOORD_0": 11
+          },
+          "indices": 12,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        -0.11534080898124799,
+        0.00029696155217849574,
+        6.593871053139816e-20,
+        0.0,
+        0.0,
+        2.561088984754225e-17,
+        -0.1153411939740181,
+        0.0,
+        -0.00029696155217849574,
+        -0.11534080898124799,
+        -2.5610804361974712e-17,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -8.33995246887207,
+        -6.4349164962768555,
+        11.33028507232666,
+        1.0
+      ],
+      "name": "zbrush_concat.osgb.cleaner.gles"
+    },
+    {
+      "children": [
+        3,
+        5
+      ],
+      "name": "Object_2"
+    },
+    {
+      "children": [
+        4
+      ],
+      "name": "/sketchfab-data/processing/8ffa25bf72c149d78658170ef4c87c48/preprocess/SubTool-0-11410130.OBJ"
+    },
+    {
+      "mesh": 0,
+      "name": "Object_4"
+    },
+    {
+      "children": [
+        6,
+        7
+      ],
+      "name": "/sketchfab-data/processing/8ffa25bf72c149d78658170ef4c87c48/preprocess/SubTool-1-6170422.OBJ"
+    },
+    {
+      "mesh": 1,
+      "name": "Object_6"
+    },
+    {
+      "mesh": 2,
+      "name": "Object_7"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9728,
+      "minFilter": 9728,
+      "wrapS": 10497,
+      "wrapT": 10497
+    },
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 1,
+      "source": 1
+    },
+    {
+      "sampler": 1,
+      "source": 2
+    }
+  ]
+}

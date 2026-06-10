@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mandibular Left Second Premolar
+* source:	https://sketchfab.com/3d-models/mandibular-left-second-premolar-fe59fe04725446479bc1115bb12d0ad8
+* author:	University of Dundee, School of Dentistry (https://sketchfab.com/DundeeDental)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mandibular Left Second Premolar" (https://sketchfab.com/3d-models/mandibular-left-second-premolar-fe59fe04725446479bc1115bb12d0ad8) by University of Dundee, School of Dentistry (https://sketchfab.com/DundeeDental) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

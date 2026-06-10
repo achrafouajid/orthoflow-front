@@ -5,6 +5,7 @@ import { PatientService } from '../../../core/services/patient.service';
 import { DentalChartService } from '../../../core/services/dental-chart.service';
 import { Patient, DentalChartState, DentalChartType, ToothState } from '../../../core/models/patient.model';
 import { DentalChartComponent } from '../../dental-chart/dental-chart.component';
+import { Dental3DCanvasComponent } from '../../dental-3d-canvas/dental-3d-canvas.component';
 import { InvoiceService } from '../../billing/services/invoice.service';
 import { Invoice } from '../../billing/models/billing.model';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -17,7 +18,7 @@ import { Treatment, StockItem } from '../../../core/models/stock.model';
 @Component({
   selector: 'app-patient-dossier',
   standalone: true,
-  imports: [CommonModule, RouterModule, DentalChartComponent, TranslateModule, FormsModule],
+  imports: [CommonModule, RouterModule, DentalChartComponent, Dental3DCanvasComponent, TranslateModule, FormsModule],
   template: `
     <div class="dossier-container">
       @if (patientService.currentPatient(); as patient) {
@@ -210,70 +211,16 @@ import { Treatment, StockItem } from '../../../core/models/stock.model';
           }
           @case ('treatments') {
             <div class="tab-pane">
-              <div class="treatments-layout">
-                <!-- Left panel: Interactive Tooth Select and active tooth info -->
-                <div class="chart-sidebar">
-                  <div class="sidebar-header-custom">
-                    <h3>{{ 'DENTAL_CHART.TITLE' | translate }}</h3>
-                    <p class="text-xs text-slate-500">Click a tooth in the chart below to inspect its history or assign a new treatment.</p>
-                  </div>
-                  <div class="dental-chart-small">
-                    @if (dentalChartState) {
-                      <app-dental-chart
-                        [chartType]="dentalChartState.chartType"
-                        [patientId]="dentalChartState.patientId"
-                        [teeth]="dentalChartState.teeth"
-                        [interactive]="true"
-                        (toothSelected)="onToothSelected($event)"
-                      />
-                    }
-                  </div>
-
-                  <!-- Selected Tooth Details Panel -->
-                  @if (selectedToothForTreatments(); as toothNum) {
-                    <div class="tooth-treatment-details fade-in-up">
-                      <div class="detail-header">
-                        <span class="tooth-badge">#{{ toothNum }}</span>
-                        <h4>Treatments on Tooth #{{ toothNum }}</h4>
-                      </div>
-                      
-                      @if (selectedToothTreatments().length > 0) {
-                        <div class="small-timeline">
-                          @for (t of selectedToothTreatments(); track t.id) {
-                            <div class="timeline-detail-item">
-                              <div class="flex justify-between items-center mb-1">
-                                <span class="font-bold text-slate-700">{{ t.treatment.name }}</span>
-                                <span [class]="getStatusClass(t.status)">{{ t.status }}</span>
-                              </div>
-                              <div class="flex justify-between text-xs text-slate-500 mb-2">
-                                <span>{{ t.doctorName }}</span>
-                                <span>{{ t.startDate | date:'shortDate' }}</span>
-                              </div>
-                              <p class="text-xs italic text-slate-600 bg-slate-50 p-2 rounded" *ngIf="t.notes">"{{ t.notes }}"</p>
-                              
-                              <!-- Materials used -->
-                              <div class="materials-used-list mt-2" *ngIf="t.consumables && t.consumables.length > 0">
-                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Materials Consumed:</span>
-                                <div class="flex flex-wrap gap-1 mt-1">
-                                  @for (c of t.consumables; track c.id) {
-                                    <span class="material-chip">
-                                      {{ c.stockItem.name }} ({{ c.quantityUsed }} {{ c.stockItem.unitLabel || 'Units' }})
-                                    </span>
-                                  }
-                                </div>
-                              </div>
-                            </div>
-                          }
-                        </div>
-                      } @else {
-                        <p class="text-slate-400 text-xs italic p-4 text-center">No treatments assigned to this tooth yet.</p>
-                      }
-
-                      <button class="btn-primary btn-sm w-full mt-3 justify-center" (click)="openAssignModal()">
-                        <span class="material-icons">add</span>
-                        Assign to Tooth #{{ toothNum }}
-                      </button>
-                    </div>
+              <div class="treatments-layout-3d">
+                <!-- Left panel: Interactive 3D Multi-View Dental Canvas -->
+                <div class="chart-sidebar-3d">
+                  @if (dentalChartState) {
+                    <app-dental-3d-canvas
+                      [patientId]="patient.id"
+                      [initialTeeth]="dentalChartState.teeth"
+                      (toothSelected)="onToothSelected3D($event)"
+                      (openAssignModal)="openAssignModalFrom3D($event)"
+                    />
                   }
                 </div>
 
@@ -1468,6 +1415,15 @@ export class PatientDossierComponent implements OnInit {
       this.dentalChartState = { ...chart };
     }
     this.selectedToothForTreatments.set(tooth.id);
+  }
+
+  onToothSelected3D(toothId: string) {
+    this.selectedToothForTreatments.set(toothId);
+  }
+
+  openAssignModalFrom3D(toothId: string) {
+    this.selectedToothForTreatments.set(toothId);
+    this.openAssignModal();
   }
 
   loadPatientTreatments(patientId: string) {

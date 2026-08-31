@@ -6,6 +6,9 @@ import { ScheduleService } from '../../core/services/schedule.service';
 import { PatientService } from '../../core/services/patient.service';
 import { Appointment } from '../../core/models/patient.model';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { ToastService } from '../../core/services/toast.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
+import { PracticeSettingsService } from '../../core/services/practice-settings.service';
 
 type CalendarView = 'day' | 'week' | 'month' | 'year';
 
@@ -19,29 +22,30 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
         <div class="header-left">
           <h1>{{ 'SCHEDULE.TITLE' | translate }}</h1>
           <div class="view-switcher">
-            <button [class.active]="view() === 'day'" (click)="view.set('day')">{{ 'SCHEDULE.DAY' | translate }}</button>
-            <button [class.active]="view() === 'month'" (click)="view.set('month')">{{ 'SCHEDULE.MONTH' | translate }}</button>
-            <button [class.active]="view() === 'year'" (click)="view.set('year')">{{ 'SCHEDULE.YEAR' | translate }}</button>
+            <button type="button" [class.active]="view() === 'day'" (click)="view.set('day')">{{ 'SCHEDULE.DAY' | translate }}</button>
+            <button type="button" [class.active]="view() === 'week'" (click)="view.set('week')">{{ 'SCHEDULE.WEEK' | translate }}</button>
+            <button type="button" [class.active]="view() === 'month'" (click)="view.set('month')">{{ 'SCHEDULE.MONTH' | translate }}</button>
+            <button type="button" [class.active]="view() === 'year'" (click)="view.set('year')">{{ 'SCHEDULE.YEAR' | translate }}</button>
           </div>
         </div>
 
         <div class="header-right">
           <div class="date-nav">
-            <button class="icon-btn" (click)="navigate(-1)">
-              <span class="material-icons">chevron_left</span>
+            <button type="button" class="icon-btn" [attr.aria-label]="'SCHEDULE.PREVIOUS' | translate" (click)="navigate(-1)">
+              <span class="material-icons" aria-hidden="true">chevron_left</span>
             </button>
             <span class="current-date">{{ formattedCurrentDate() }}</span>
-            <button class="icon-btn" (click)="navigate(1)">
-              <span class="material-icons">chevron_right</span>
+            <button type="button" class="icon-btn" [attr.aria-label]="'SCHEDULE.NEXT' | translate" (click)="navigate(1)">
+              <span class="material-icons" aria-hidden="true">chevron_right</span>
             </button>
-            <button class="btn-ghost" (click)="goToToday()">{{ 'SCHEDULE.TODAY' | translate }}</button>
+            <button type="button" class="btn-ghost" (click)="goToToday()">{{ 'SCHEDULE.TODAY' | translate }}</button>
           </div>
           <div class="filters">
             <div class="search-box">
               <span class="material-icons">search</span>
               <input type="text" [placeholder]="'SCHEDULE.FILTER_PLACEHOLDER' | translate" (input)="onPatientFilter($event)" />
             </div>
-            <button class="btn-primary" (click)="openAddModal()">
+            <button type="button" class="btn-primary" (click)="openAddModal()">
               <span class="material-icons">add</span>
               {{ 'SCHEDULE.NEW_APPOINTMENT' | translate }}
             </button>
@@ -60,21 +64,95 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
               </div>
               <div class="calendar-grid">
                 @for (day of calendarDays(); track day.date.toISOString()) {
-                  <div 
-                    class="calendar-day" 
+                  <!-- The cell is a container, not a control. It used to be
+                       role="button" wrapping the event pills, which are
+                       buttons too — an interactive element inside an
+                       interactive element (axe nested-interactive), so
+                       screen readers could not reach the appointments
+                       inside a day. The day number is now the "add on this
+                       day" control, making both actions siblings. -->
+                  <div
+                    class="calendar-day"
                     [class.other-month]="!day.isCurrentMonth"
                     [class.today]="day.isToday"
                     (click)="openAddModal(day.date)"
                   >
-                    <span class="day-number">{{ day.date.getDate() }}</span>
+                    <button
+                      type="button"
+                      class="day-number"
+                      [attr.aria-label]="('SCHEDULE.ADD_APPOINTMENT_ON' | translate: { date: day.date.toDateString() })"
+                      (click)="openAddModal(day.date); $event.stopPropagation()"
+                    >{{ day.date.getDate() }}</button>
                     <div class="day-events">
                       @for (event of day.events; track event.id) {
-                        <div class="event-pill" [class]="event.type.toLowerCase()" (click)="openEditModal(event); $event.stopPropagation()">
+                        <button
+                          type="button"
+                          class="event-pill"
+                          [class]="'event-pill ' + event.type.toLowerCase()"
+                          [attr.aria-label]="('SCHEDULE.VIEW_APPOINTMENT' | translate: { patient: getPatientName(event.patientId), time: formatTime(event.dateTime) })"
+                          (click)="openEditModal(event); $event.stopPropagation()"
+                        >
                           <span class="event-time">{{ formatTime(event.dateTime) }}</span>
                           <span class="event-patient">{{ getPatientName(event.patientId) }}</span>
-                        </div>
+                        </button>
                       }
                     </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @case ('week') {
+            <div class="week-view">
+              <div class="week-header-row">
+                <div class="time-gutter"></div>
+                @for (day of weekDays(); track day.date.toISOString()) {
+                  <div class="week-day-header" [class.today]="day.isToday">
+                    <span class="week-day-name">{{ 'SCHEDULE.WEEKDAYS.' + weekdays[day.date.getDay()] | translate }}</span>
+                    <span class="week-day-number">{{ day.date.getDate() }}</span>
+                  </div>
+                }
+              </div>
+              <div class="week-body">
+                <div class="time-column">
+                  @for (hour of hours(); track hour) {
+                    <div class="time-slot">{{ hour }}:00</div>
+                  }
+                </div>
+                @for (day of weekDays(); track day.date.toISOString()) {
+                  <div class="week-day-column" [class.today]="day.isToday">
+                    @for (hour of hours(); track hour) {
+                      <div
+                        class="hour-row"
+                        (click)="openAddModalWithTime(hour, day.date)"
+                        (dragover)="onDragOver($event)"
+                        (drop)="onDrop($event, day.date, hour)"
+                      ></div>
+                    }
+                    @for (event of day.events; track event.id) {
+                      <div
+                        class="day-event-card"
+                        [style.top.px]="getEventTop(event)"
+                        [style.height.px]="52"
+                        [class]="event.type.toLowerCase()"
+                        [class.dragging]="draggingId() === event.id"
+                        draggable="true"
+                        tabindex="0"
+                        role="button"
+                        [attr.aria-label]="('SCHEDULE.VIEW_APPOINTMENT' | translate: { patient: getPatientName(event.patientId), time: formatTime(event.dateTime) })"
+                        (dragstart)="onDragStart($event, event)"
+                        (dragend)="draggingId.set(null)"
+                        (click)="openEditModal(event); $event.stopPropagation()"
+                        (keydown.enter)="openEditModal(event); $event.stopPropagation()"
+                        (keydown.space)="$event.preventDefault(); openEditModal(event); $event.stopPropagation()"
+                      >
+                        <div class="card-time">{{ formatTime(event.dateTime) }}</div>
+                        <span class="patient">{{ getPatientName(event.patientId) }}</span>
+                        @if (event.chairName) {
+                          <span class="chair-tag">{{ event.chairName }}</span>
+                        }
+                      </div>
+                    }
                   </div>
                 }
               </div>
@@ -83,26 +161,42 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
           @case ('day') {
             <div class="day-view">
               <div class="time-column">
-                @for (hour of hours; track hour) {
+                @for (hour of hours(); track hour) {
                   <div class="time-slot">{{ hour }}:00</div>
                 }
               </div>
-              <div class="events-column">
-                @for (hour of hours; track hour) {
+              <div
+                class="events-column"
+                (dragover)="onDragOver($event)"
+                (drop)="onDrop($event, currentDate(), null)"
+              >
+                @for (hour of hours(); track hour) {
                   <div class="hour-row" (click)="openAddModalWithTime(hour)"></div>
                 }
                 @for (event of dayEvents(); track event.id) {
-                  <div 
-                    class="day-event-card" 
+                  <div
+                    class="day-event-card"
                     [style.top.px]="getEventTop(event)"
                     [style.height.px]="60"
                     [class]="event.type.toLowerCase()"
+                    [class.dragging]="draggingId() === event.id"
+                    draggable="true"
+                    tabindex="0"
+                    role="button"
+                    [attr.aria-label]="('SCHEDULE.VIEW_APPOINTMENT' | translate: { patient: getPatientName(event.patientId), time: formatTime(event.dateTime) })"
+                    (dragstart)="onDragStart($event, event)"
+                    (dragend)="draggingId.set(null)"
                     (click)="openEditModal(event)"
+                    (keydown.enter)="openEditModal(event)"
+                    (keydown.space)="$event.preventDefault(); openEditModal(event)"
                   >
                     <div class="card-time">{{ formatTime(event.dateTime) }}</div>
                     <div class="card-content">
                       <span class="patient">{{ getPatientName(event.patientId) }}</span>
                       <span class="type">{{ 'SCHEDULE.TYPES.' + event.type.toUpperCase() | translate }}</span>
+                      @if (event.chairName) {
+                        <span class="chair-tag">{{ event.chairName }}</span>
+                      }
                       @if (event.notes) {
                         <p class="notes">{{ event.notes }}</p>
                       }
@@ -137,8 +231,8 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
           <div class="modal-content" (click)="$event.stopPropagation()">
             <header class="modal-header">
               <h2>{{ (editingAppointment() ? 'SCHEDULE.FORM.TITLE_EDIT' : 'SCHEDULE.FORM.TITLE_ADD') | translate }}</h2>
-              <button class="icon-btn" (click)="closeModal()">
-                <span class="material-icons">close</span>
+              <button type="button" class="icon-btn" [attr.aria-label]="'SCHEDULE.CLOSE' | translate" (click)="closeModal()">
+                <span class="material-icons" aria-hidden="true">close</span>
               </button>
             </header>
             
@@ -183,6 +277,22 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
                 </div>
               </div>
 
+              <div class="form-row">
+                <div class="form-group">
+                  <label>{{ 'SCHEDULE.FORM.CHAIR' | translate }}</label>
+                  <select formControlName="chairId">
+                    <option value="">{{ 'SCHEDULE.FORM.NO_CHAIR' | translate }}</option>
+                    @for (chair of scheduleService.chairs(); track chair.id) {
+                      <option [value]="chair.id">{{ chair.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{ 'SCHEDULE.FORM.DURATION_MINUTES' | translate }}</label>
+                  <input type="number" min="5" step="5" formControlName="durationMinutes">
+                </div>
+              </div>
+
               <div class="form-group">
                 <label>{{ 'SCHEDULE.FORM.NOTES' | translate }}</label>
                 <textarea formControlName="notes" rows="3"></textarea>
@@ -215,7 +325,7 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
       height: calc(100vh - 120px);
       background: white;
       border-radius: 20px;
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border);
       box-shadow: 0 10px 25px rgba(0,0,0,0.05);
       overflow: hidden;
       position: relative;
@@ -225,7 +335,7 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
 
     .schedule-header {
       padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -239,7 +349,7 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
 
     .view-switcher {
       display: flex;
-      background: #f1f5f9;
+      background: rgb(var(--ink-100));
       padding: 0.25rem;
       border-radius: 10px;
     }
@@ -251,14 +361,15 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
       border-radius: 8px;
       font-size: 0.85rem;
       font-weight: 600;
-      color: #64748b;
+      /* Sits on a tinted track, where --text-muted would be 4.17:1. */
+      color: var(--text-muted-on-tint);
       cursor: pointer;
       transition: all 0.2s;
     }
 
     .view-switcher button.active {
       background: white;
-      color: var(--primary);
+      color: var(--action-text);
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
@@ -289,8 +400,8 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
 
     .search-box {
       position: relative;
-      background: #f8fafc;
-      border: 1px solid var(--border-color);
+      background: rgb(var(--ink-50));
+      border: 1px solid var(--border);
       border-radius: 10px;
       display: flex;
       align-items: center;
@@ -305,7 +416,7 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
       font-size: 0.9rem;
     }
 
-    .search-box .material-icons { font-size: 1.2rem; color: #94a3b8; }
+    .search-box .material-icons { font-size: 1.2rem; color: rgb(var(--ink-500)); }
 
     .calendar-body {
       flex: 1;
@@ -322,8 +433,8 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
     .weekday-header {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      background: #f8fafc;
-      border-bottom: 1px solid var(--border-color);
+      background: rgb(var(--ink-50));
+      border-bottom: 1px solid var(--border);
     }
 
     .weekday {
@@ -331,7 +442,7 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
       text-align: center;
       font-size: 0.75rem;
       font-weight: 700;
-      color: #94a3b8;
+      color: rgb(var(--ink-500));
       text-transform: uppercase;
     }
 
@@ -343,19 +454,25 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
     }
 
     .calendar-day {
-      border-right: 1px solid #f1f5f9;
-      border-bottom: 1px solid #f1f5f9;
+      border-inline-end: 1px solid rgb(var(--ink-100));
+      border-bottom: 1px solid rgb(var(--ink-100));
       padding: 0.5rem;
       min-height: 120px;
       transition: background 0.2s;
       cursor: pointer;
     }
 
-    .calendar-day:hover { background: #fdfdfd; }
-    .calendar-day.other-month { background: #fafafa; opacity: 0.5; }
-    .calendar-day.today { background: #f5f3ff; }
+    .calendar-day:hover { background: rgb(var(--ink-50)); }
+    /* Adjacent-month cells are de-emphasised by tint, not by a blanket
+       opacity: halving the alpha dropped the date numerals to 1.92:1,
+       which is unreadable. The tinted ground plus a muted (but AA) numeral
+       gives the same "not this month" reading at 4.87:1. */
+    .calendar-day.other-month { background: rgb(var(--ink-100)); }
+    .calendar-day.other-month .day-number { color: var(--text-muted-on-tint); }
+    .calendar-day.other-month .event-pill { opacity: 0.75; }
+    .calendar-day.today { background: rgb(var(--petrol-50)); }
     .calendar-day.today .day-number {
-      background: var(--primary);
+      background: var(--action);
       color: white;
       width: 24px;
       height: 24px;
@@ -366,9 +483,14 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
     }
 
     .day-number {
+      border: 0;
+      background: none;
+      padding: 0;
+      cursor: pointer;
+      font-family: inherit;
       font-size: 0.85rem;
       font-weight: 600;
-      color: #64748b;
+      color: rgb(var(--ink-800));
       margin-bottom: 0.5rem;
       display: inline-block;
     }
@@ -380,6 +502,12 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
     }
 
     .event-pill {
+      /* now a <button>; reset the UA styles it brings with it */
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: start;
+      width: 100%;
       font-size: 0.7rem;
       padding: 0.25rem 0.5rem;
       border-radius: 6px;
@@ -389,17 +517,17 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
       display: flex;
       gap: 0.25rem;
       font-weight: 600;
-      transition: transform 0.1s;
+      transition: transform var(--dur-1) var(--ease-out);
     }
     .event-pill:hover { transform: scale(1.02); }
 
-    .event-pill.checkup { background: #e0e7ff; color: #4338ca; }
-    .event-pill.initial { background: #dcfce7; color: #166534; }
-    .event-pill.emergency { background: #fee2e2; color: #b91c1c; }
-    .event-pill.consultation { background: #fef9c3; color: #854d0e; }
-    .event-pill.braces_fit { background: #fae8ff; color: #86198f; }
-    .event-pill.aligner_fit { background: #f1f5f9; color: #334155; }
-    .event-pill.retainer { background: #dcfce7; color: #15803d; }
+    .event-pill.checkup { background: var(--status-active-tint); color: var(--status-active-text); }
+    .event-pill.initial { background: rgb(var(--positive-100)); color: rgb(var(--positive-700)); }
+    .event-pill.emergency { background: rgb(var(--critical-100)); color: rgb(var(--critical-700)); }
+    .event-pill.consultation { background: rgb(var(--ink-100)); color: rgb(var(--ink-700)); }
+    .event-pill.braces_fit { background: rgb(var(--ink-100)); color: rgb(var(--ink-700)); }
+    .event-pill.aligner_fit { background: rgb(var(--ink-100)); color: rgb(var(--ink-700)); }
+    .event-pill.retainer { background: rgb(var(--positive-100)); color: rgb(var(--positive-700)); }
 
     /* Day View */
     .day-view {
@@ -409,16 +537,16 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
 
     .time-column {
       width: 80px;
-      border-right: 1px solid var(--border-color);
-      background: #f8fafc;
+      border-inline-end: 1px solid var(--border);
+      background: rgb(var(--ink-50));
     }
 
     .time-slot {
       height: 60px;
       padding: 0.5rem;
       font-size: 0.75rem;
-      color: #94a3b8;
-      text-align: right;
+      color: rgb(var(--ink-500));
+      text-align: end;
     }
 
     .events-column {
@@ -429,17 +557,17 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
 
     .hour-row {
       height: 60px;
-      border-bottom: 1px solid #f1f5f9;
+      border-bottom: 1px solid rgb(var(--ink-100));
       cursor: cell;
     }
-    .hour-row:hover { background: #f8fafc; }
+    .hour-row:hover { background: rgb(var(--ink-50)); }
 
     .day-event-card {
       position: absolute;
-      left: 10px;
-      right: 10px;
+      inset-inline-start: 10px;
+      inset-inline-end: 10px;
       background: white;
-      border-left: 4px solid var(--primary);
+      border-inline-start: 4px solid var(--action);
       border-radius: 8px;
       padding: 0.5rem 1rem;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
@@ -451,13 +579,80 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
     }
     .day-event-card:hover { transform: translateY(-2px); }
 
-    .day-event-card.checkup { border-left-color: #4f46e5; background: #f5f3ff; }
-    .day-event-card.emergency { border-left-color: #ef4444; background: #fef2f2; }
+    .day-event-card.checkup { border-inline-start-color: var(--action); background: rgb(var(--petrol-50)); }
+    .day-event-card.emergency { border-inline-start-color: rgb(var(--critical-500)); background: rgb(var(--critical-50)); }
+    .day-event-card.dragging { opacity: 0.4; }
 
-    .card-time { font-weight: 700; color: #4f46e5; font-size: 0.9rem; }
-    .card-content .patient { display: block; font-weight: 700; color: #1e293b; }
-    .card-content .type { font-size: 0.75rem; color: #64748b; }
-    .card-content .notes { font-size: 0.75rem; color: #94a3b8; margin: 0.25rem 0 0 0; }
+    .card-time { font-weight: 700; color: rgb(var(--petrol-900)); font-size: 0.9rem; }
+    .card-content .patient { display: block; font-weight: 700; color: rgb(var(--ink-900)); }
+    .card-content .type { font-size: 0.75rem; color: rgb(var(--ink-500)); }
+    .card-content .notes { font-size: 0.75rem; color: rgb(var(--ink-500)); margin: 0.25rem 0 0 0; }
+    .chair-tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.05rem 0.4rem;
+      border-radius: 999px;
+      background: rgb(var(--petrol-100));
+      color: rgb(var(--petrol-900));
+      margin-inline-start: 0.35rem;
+    }
+
+    /* Week View */
+    .week-view {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: auto;
+    }
+    .week-header-row {
+      display: grid;
+      grid-template-columns: 80px repeat(7, 1fr);
+      border-bottom: 1px solid var(--border);
+      background: rgb(var(--ink-50));
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .time-gutter { border-inline-end: 1px solid var(--border); }
+    .week-day-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.6rem 0;
+      border-inline-end: 1px solid rgb(var(--ink-100));
+    }
+    .week-day-header.today { background: rgb(var(--petrol-50)); }
+    .week-day-name { font-size: 0.7rem; font-weight: 600; color: rgb(var(--ink-500)); text-transform: uppercase; }
+    .week-day-number { font-size: 1.1rem; font-weight: 700; color: rgb(var(--ink-900)); }
+    .week-day-header.today .week-day-number { color: rgb(var(--petrol-900)); }
+    .week-body {
+      display: grid;
+      grid-template-columns: 80px repeat(7, 1fr);
+      flex: 1;
+    }
+    .week-day-column {
+      position: relative;
+      border-inline-end: 1px solid rgb(var(--ink-100));
+      background: white;
+    }
+    .week-day-column.today { background: rgb(var(--petrol-50)); }
+    .week-day-column .hour-row {
+      height: 52px;
+      border-bottom: 1px solid rgb(var(--ink-100));
+      cursor: cell;
+    }
+    .week-day-column .hour-row:hover { background: rgb(var(--ink-100)); }
+    .week-day-column .day-event-card {
+      inset-inline-start: 4px;
+      inset-inline-end: 4px;
+      padding: 0.35rem 0.5rem;
+      flex-direction: column;
+      gap: 0.1rem;
+      font-size: 0.75rem;
+    }
+    .week-day-column .card-time { font-size: 0.7rem; }
+    .week-day-column .patient { font-weight: 700; color: rgb(var(--ink-900)); font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* Modal */
     .modal-overlay {
@@ -490,11 +685,11 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
     .modal-header h2 { margin: 0; font-size: 1.25rem; }
 
     .form-group { margin-bottom: 1.5rem; }
-    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #64748b; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: rgb(var(--ink-500)); }
     .form-group input, .form-group select, .form-group textarea {
       width: 100%;
       padding: 0.75rem;
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border);
       border-radius: 10px;
       outline: none;
       font-size: 0.95rem;
@@ -507,23 +702,10 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
       align-items: center;
       margin-top: 2rem;
       padding-top: 1.5rem;
-      border-top: 1px solid var(--border-color);
+      border-top: 1px solid var(--border);
     }
 
     .footer-right { display: flex; gap: 1rem; }
-
-    .btn-danger {
-      background: #fee2e2;
-      color: #b91c1c;
-      border: none;
-      padding: 0.6rem 1rem;
-      border-radius: 10px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-    }
 
     /* Year View */
     .year-view {
@@ -543,45 +725,32 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
       font-size: 0.6rem;
       padding: 2px;
       text-align: center;
-      color: #94a3b8;
+      color: rgb(var(--ink-500));
     }
     .mini-day.has-event {
-      background: var(--primary);
+      background: var(--action);
       color: white;
       border-radius: 2px;
     }
 
-    /* Buttons */
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 0.6rem 1.25rem;
-      border-radius: 10px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-    }
 
-    .icon-btn {
-      background: #f1f5f9;
-      border: none;
-      padding: 0.4rem;
-      border-radius: 8px;
-      cursor: pointer;
-      color: #64748b;
+
+
+    .calendar-day:focus-visible,
+    .event-pill:focus-visible,
+    .day-event-card:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: -2px;
     }
 
     .btn-ghost {
       background: transparent;
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border);
       padding: 0.5rem 1rem;
       border-radius: 10px;
       font-size: 0.85rem;
       font-weight: 600;
-      color: #64748b;
+      color: rgb(var(--ink-500));
       cursor: pointer;
     }
 
@@ -609,6 +778,9 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
 })
 export class ScheduleComponent {
   scheduleService = inject(ScheduleService);
+  private toast = inject(ToastService);
+  private confirmDialog = inject(ConfirmDialogService);
+  private practiceSettings = inject(PracticeSettingsService);
   patientService = inject(PatientService);
   translate = inject(TranslateService);
   fb = inject(FormBuilder);
@@ -617,22 +789,35 @@ export class ScheduleComponent {
   currentDate = signal(new Date());
   showModal = signal(false);
   editingAppointment = signal<Appointment | null>(null);
+  draggingId = signal<string | null>(null);
+  patientFilterTerm = signal('');
 
   appointmentForm: FormGroup;
   appointmentTypes = ['Checkup', 'Initial', 'Emergency', 'Consultation', 'Braces_Fit', 'Aligner_Fit', 'Retainer'];
   appointmentStatuses = ['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 
   weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
+  // Configurable per-clinic (audit VIII.6/P2#29) via Settings > Scheduling;
+  // defaults to the old hardcoded 8 AM-7 PM until the real value loads.
+  hours = computed(() => {
+    const { workingHoursStart, workingHoursEnd } = this.practiceSettings.settings();
+    return Array.from({ length: workingHoursEnd - workingHoursStart }, (_, i) => i + workingHoursStart);
+  });
 
   constructor() {
     this.appointmentForm = this.fb.group({
       patientId: ['', Validators.required],
       dateTime: ['', Validators.required],
+      chairId: [''],
+      durationMinutes: [30, [Validators.min(5)]],
       type: ['Checkup', Validators.required],
       status: ['SCHEDULED', Validators.required],
       notes: [''],
       applianceStep: [null]
+    });
+
+    this.practiceSettings.load().subscribe({
+      error: () => {} // keep the hardcoded default hours; not worth a toast for a background preference load
     });
   }
 
@@ -646,10 +831,19 @@ export class ScheduleComponent {
     };
   });
 
+  /** Appointments filtered by the patient search box — shared by every view. */
+  filteredAppointments = computed(() => {
+    const term = this.patientFilterTerm().trim().toLowerCase();
+    const all = this.scheduleService.appointments();
+    if (!term) return all;
+    return all.filter(app => this.getPatientName(app.patientId).toLowerCase().includes(term));
+  });
+
   calendarDays = computed(() => {
     const date = this.currentDate();
     const start = new Date(date.getFullYear(), date.getMonth(), 1);
     const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    const appointments = this.filteredAppointments();
 
     const days = [];
 
@@ -672,7 +866,7 @@ export class ScheduleComponent {
         date: d,
         isCurrentMonth: true,
         isToday: d.toDateString() === today.toDateString(),
-        events: this.scheduleService.appointments().filter(app =>
+        events: appointments.filter(app =>
           new Date(app.dateTime).toDateString() === d.toDateString()
         )
       });
@@ -682,17 +876,48 @@ export class ScheduleComponent {
   });
 
   dayEvents = computed(() => {
-    return this.scheduleService.appointments().filter(app =>
+    return this.filteredAppointments().filter(app =>
       new Date(app.dateTime).toDateString() === this.currentDate().toDateString()
     );
+  });
+
+  /** The Sun–Sat week containing currentDate, each day pre-loaded with its events. */
+  weekDays = computed(() => {
+    const date = this.currentDate();
+    const today = new Date();
+    const appointments = this.filteredAppointments();
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay());
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      return {
+        date: d,
+        isToday: d.toDateString() === today.toDateString(),
+        events: appointments.filter(app => new Date(app.dateTime).toDateString() === d.toDateString())
+      };
+    });
   });
 
   formattedCurrentDate = computed(() => {
     const date = this.currentDate();
     const v = this.view();
     const locale = this.translate.currentLang || 'en';
-    
+
     if (v === 'day') return date.toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' });
+    if (v === 'week') {
+      const week = this.weekDays();
+      const start = week[0].date;
+      const end = week[6].date;
+      // Always include the month on both ends — Intl's day+year-only
+      // pattern (no month) renders as a malformed fallback string like
+      // "(day: 22)" in some browsers rather than a clean date, so the
+      // same-month "16 – 22, 2026" shorthand isn't worth the risk.
+      const startLabel = start.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+      const endLabel = end.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+      return `${startLabel} – ${endLabel}`;
+    }
     if (v === 'month') return date.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
     return date.getFullYear().toString();
   });
@@ -701,6 +926,7 @@ export class ScheduleComponent {
     const date = new Date(this.currentDate());
     const v = this.view();
     if (v === 'day') date.setDate(date.getDate() + dir);
+    else if (v === 'week') date.setDate(date.getDate() + dir * 7);
     else if (v === 'month') date.setMonth(date.getMonth() + dir);
     else date.setFullYear(date.getFullYear() + dir);
     this.currentDate.set(date);
@@ -723,7 +949,7 @@ export class ScheduleComponent {
   getEventTop(event: Appointment) {
     const date = new Date(event.dateTime);
     const hours = date.getHours() + date.getMinutes() / 60;
-    return (hours - 8) * 60; // 60px per hour, starting at 8 AM
+    return (hours - this.practiceSettings.settings().workingHoursStart) * 60; // 60px per hour
   }
 
   monthHasEvent(monthIndex: number, day: number) {
@@ -734,8 +960,9 @@ export class ScheduleComponent {
     });
   }
 
-  onPatientFilter(event: any) {
-    // Implement filter logic if needed
+  onPatientFilter(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.patientFilterTerm.set(value);
   }
 
   openAddModal(date?: Date) {
@@ -743,18 +970,93 @@ export class ScheduleComponent {
     this.appointmentForm.reset({
       patientId: '',
       dateTime: this.formatDateForInput(date || new Date()),
+      chairId: '',
+      durationMinutes: 30,
       type: 'Checkup',
-      status: 'Scheduled',
+      status: 'SCHEDULED',
       notes: '',
       applianceStep: null
     });
     this.showModal.set(true);
   }
 
-  openAddModalWithTime(hour: number) {
-    const date = new Date(this.currentDate());
+  openAddModalWithTime(hour: number, day?: Date) {
+    const date = new Date(day || this.currentDate());
     date.setHours(hour, 0, 0, 0);
     this.openAddModal(date);
+  }
+
+  // ── Drag-to-reschedule ──────────────────────────────────────────────
+  // Native HTML5 drag & drop — no library needed for a single-axis (time
+  // slot) drop target. dragstart stashes the appointment id in both the
+  // dataTransfer payload and a signal (for the CSS "lifted" style); drop
+  // reads the target day/hour from the slot the pointer released over and
+  // asks the server to move it, running through the exact same conflict
+  // check as a manual edit so a drag can't silently create a double-booking.
+
+  onDragStart(event: DragEvent, appointment: Appointment): void {
+    this.draggingId.set(appointment.id);
+    event.dataTransfer?.setData('text/plain', appointment.id);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  }
+
+  async onDrop(event: DragEvent, day: Date, hour: number | null): Promise<void> {
+    event.preventDefault();
+    const id = event.dataTransfer?.getData('text/plain') || this.draggingId();
+    this.draggingId.set(null);
+    if (!id) return;
+
+    const appointment = this.scheduleService.appointments().find(a => a.id === id);
+    if (!appointment) return;
+
+    const original = new Date(appointment.dateTime);
+    const newDate = new Date(day);
+    if (hour !== null) {
+      newDate.setHours(hour, 0, 0, 0);
+    } else {
+      newDate.setHours(original.getHours(), original.getMinutes(), 0, 0);
+    }
+    if (newDate.getTime() === original.getTime()) return;
+
+    const conflict = this.findConflict(appointment.patientId, newDate, appointment.id);
+    if (conflict) {
+      const proceed = await this.confirmDialog.confirm(
+        `${this.getPatientName(appointment.patientId)} already has an appointment at ${this.formatTime(conflict.dateTime)} on this day. Reschedule anyway?`,
+        { confirmLabel: 'Reschedule Anyway' }
+      );
+      if (!proceed) return;
+    }
+
+    this.scheduleService.updateAppointment(appointment.id, { dateTime: newDate.toISOString() }).subscribe({
+      next: () => this.toast.success('Appointment rescheduled.'),
+      error: (err) => {
+        console.error('Error rescheduling appointment', err);
+        this.toast.error(err.error?.detail || err.error?.message || 'Could not reschedule the appointment.');
+      }
+    });
+  }
+
+  /**
+   * Client-side double-booking check for the same PATIENT (audit VIII.6 —
+   * advisory, not a hard guarantee under concurrent edits: two tabs can
+   * still race past this). Chair-level conflicts are a separate axis and
+   * ARE enforced with a hard guarantee — a Postgres exclusion constraint
+   * (V21__scheduling_resources.sql) rejects an overlapping chair booking
+   * server-side even if this client-side check is bypassed or stale.
+   * Flags any other non-cancelled appointment for the same patient within
+   * 30 minutes of the target time.
+   */
+  private findConflict(patientId: string, dateTime: Date, excludeId?: string): Appointment | null {
+    const THIRTY_MIN = 30 * 60 * 1000;
+    return this.scheduleService.appointments().find(a => {
+      if (a.id === excludeId || a.patientId !== patientId || a.status === 'CANCELLED') return false;
+      return Math.abs(new Date(a.dateTime).getTime() - dateTime.getTime()) < THIRTY_MIN;
+    }) || null;
   }
 
   openEditModal(appointment: Appointment) {
@@ -762,6 +1064,8 @@ export class ScheduleComponent {
     this.appointmentForm.patchValue({
       patientId: appointment.patientId,
       dateTime: this.formatDateForInput(new Date(appointment.dateTime)),
+      chairId: appointment.chairId || '',
+      durationMinutes: appointment.durationMinutes ?? 30,
       type: appointment.type,
       status: appointment.status,
       notes: appointment.notes,
@@ -775,30 +1079,63 @@ export class ScheduleComponent {
     this.editingAppointment.set(null);
   }
 
-  saveAppointment() {
+  async saveAppointment() {
     if (this.appointmentForm.invalid) return;
 
-    const data = this.appointmentForm.value;
-    const obs = this.editingAppointment() 
-      ? this.scheduleService.updateAppointment(this.editingAppointment()!.id, data)
+    // The <input type="datetime-local"> value ("2026-08-25T01:34", no
+    // timezone/seconds) isn't a valid OffsetDateTime on the wire — Jackson
+    // rejects it with a 500 (it was previously only converted correctly on
+    // the drag-to-reschedule path below, never on this direct-save path).
+    const data = {
+      ...this.appointmentForm.value,
+      dateTime: new Date(this.appointmentForm.value.dateTime).toISOString(),
+      chairId: this.appointmentForm.value.chairId || null
+    };
+    const editing = this.editingAppointment();
+
+    const conflict = this.findConflict(data.patientId, new Date(data.dateTime), editing?.id);
+    if (conflict) {
+      const proceed = await this.confirmDialog.confirm(
+        `${this.getPatientName(data.patientId)} already has an appointment at ${this.formatTime(conflict.dateTime)} on this day. Schedule anyway?`,
+        { confirmLabel: 'Schedule Anyway' }
+      );
+      if (!proceed) return;
+    }
+
+    const obs = editing
+      ? this.scheduleService.updateAppointment(editing.id, data)
       : this.scheduleService.addAppointment(data);
 
     obs.subscribe({
       next: () => {
+        this.toast.success(editing ? 'Appointment updated.' : 'Appointment scheduled.');
         this.closeModal();
       },
-      error: (err) => console.error('Error saving appointment', err)
+      error: (err) => {
+        console.error('Error saving appointment', err);
+        this.toast.error(err.error?.detail || err.error?.message || 'Could not save the appointment. Please try again.');
+      }
     });
   }
 
-  deleteAppointment() {
+  async deleteAppointment() {
     const app = this.editingAppointment();
     if (!app) return;
 
-    if (confirm(this.translate.instant('COMMON.DELETE_CONFIRM') || 'Are you sure?')) {
+    const confirmed = await this.confirmDialog.confirm(
+      this.translate.instant('COMMON.DELETE_CONFIRM') || 'Are you sure?',
+      { danger: true, confirmLabel: 'Delete' }
+    );
+    if (confirmed) {
       this.scheduleService.deleteAppointment(app.id).subscribe({
-        next: () => this.closeModal(),
-        error: (err) => console.error('Error deleting appointment', err)
+        next: () => {
+          this.toast.success('Appointment deleted.');
+          this.closeModal();
+        },
+        error: (err) => {
+          console.error('Error deleting appointment', err);
+          this.toast.error('Could not delete the appointment. Please try again.');
+        }
       });
     }
   }

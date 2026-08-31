@@ -2,60 +2,71 @@ import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { HeaderComponent } from '../header/header.component';
-import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, HeaderComponent, CommonModule],
+  imports: [RouterOutlet, SidebarComponent, HeaderComponent, TranslateModule],
   template: `
-    <main class="flex min-h-screen bg-[#f8fafc] relative">
-      <!-- Sidebar with responsive classes -->
-      <app-sidebar 
-        class="hidden md:block" 
-        [class.mobile-open]="isMobileMenuOpen()"
-      />
+    <a href="#main-content" class="skip-link">{{ 'COMMON.SKIP_TO_CONTENT' | translate }}</a>
 
-      <!-- Overlay for mobile menu -->
+    <div class="relative flex min-h-screen bg-app-bg">
+      <app-sidebar class="no-print hidden md:block" [class.mobile-open]="isMobileMenuOpen()" />
+
       @if (isMobileMenuOpen()) {
-        <div 
-          class="fixed inset-0 bg-black/50 z-10 md:hidden" 
+        <div
+          class="animate-fade fixed inset-0 z-30 bg-ink-950/50 backdrop-blur-[2px] md:hidden"
           (click)="toggleMobileMenu()"
+          aria-hidden="true"
         ></div>
       }
 
-      <section class="flex flex-1 flex-col overflow-hidden w-full">
-        <app-header (menuToggle)="toggleMobileMenu()" />
-        <main class="flex-1 overflow-y-auto p-4 md:p-8">
-          <div class="mx-auto max-w-7xl">
+      <div class="flex w-full min-w-0 flex-1 flex-col">
+        <app-header class="no-print" (menuToggle)="toggleMobileMenu()" />
+        <main id="main-content" class="flex-1 p-4 md:p-6 lg:p-8">
+          <div class="mx-auto max-w-[88rem]">
             <router-outlet />
           </div>
         </main>
-      </section>
-    </main>
+      </div>
+    </div>
   `,
   styles: [`
     :host ::ng-deep .mobile-open {
       display: block !important;
       position: fixed;
-      left: 0;
+      inset-inline-start: 0;
       top: 0;
       bottom: 0;
-      z-index: 30;
-      width: 260px;
-      animation: slideIn 0.3s ease-out;
+      z-index: var(--z-drawer);
+      width: 248px;
+      /* The drawer docks at inset-inline-start, which resolves to the right
+         edge in RTL — so "off-screen" is +100% in RTL and -100% in LTR.
+         translateX has no logical equivalent, so direction is picked from
+         the document dir instead. */
+      --slide-offset: -100%;
+      animation: slide-in var(--dur-4) var(--ease-out);
     }
 
-    @keyframes slideIn {
-      from { transform: translateX(-100%); }
-      to { transform: translateX(0); }
+    :host-context([dir='rtl']) ::ng-deep .mobile-open {
+      --slide-offset: 100%;
     }
-  `]
+
+    @keyframes slide-in {
+      from { transform: translateX(var(--slide-offset)); }
+      to   { transform: translateX(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      :host ::ng-deep .mobile-open { animation: none; }
+    }
+  `],
 })
 export class MainLayoutComponent {
-  isMobileMenuOpen = signal(false);
+  readonly isMobileMenuOpen = signal(false);
 
-  toggleMobileMenu() {
+  toggleMobileMenu(): void {
     this.isMobileMenuOpen.set(!this.isMobileMenuOpen());
   }
 }

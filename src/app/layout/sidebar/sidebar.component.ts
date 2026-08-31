@@ -1,85 +1,109 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { CabinetService } from '../../core/services/cabinet.service';
+import { IconComponent, IconName } from '../../shared/ui/icon.component';
 
+interface NavItem {
+  key: string;
+  path: string;
+  icon: IconName;
+  exact?: boolean;
+}
+
+/**
+ * Primary navigation.
+ *
+ * The rail is dark (petrol-900) against light content. That does three
+ * things a white-on-white sidebar cannot: it separates chrome from data at
+ * a glance, it carries the brand on every screen without a logo lockup
+ * shouting on each page, and it makes the dark 3D odontogram panel read as
+ * part of the visual language rather than an intrusion.
+ *
+ * The eight destinations are grouped rather than listed flat. A flat list
+ * of eight makes the user read all eight labels to find one; grouping by
+ * what they are doing — clinical work vs. running the practice — means they
+ * read one heading and then three items.
+ */
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, TranslateModule],
+  imports: [RouterLink, RouterLinkActive, TranslateModule, IconComponent],
   template: `
-    <aside 
-      class="sidebar sticky top-0 flex h-screen flex-col border-r border-ortho-navy/5 bg-white shadow-sm z-20"
+    <aside
+      class="sidebar on-inverse sticky top-0 z-20 flex h-screen flex-col bg-petrol-900"
       [class.sidebar-collapsed]="isCollapsed()"
     >
-      <!-- Sidebar Header -->
-      <div class="flex h-16 items-center px-6 border-b border-ortho-navy/5 overflow-hidden">
-        <div class="flex items-center gap-3 shrink-0">
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ortho-navy text-white font-bold overflow-hidden border border-ortho-navy/10">
-            @if (cabinetService.cabinetInfo()?.logoUrl) {
-              <img [src]="cabinetService.cabinetInfo()?.logoUrl" alt="Logo" class="h-full w-full object-contain bg-white" />
-            } @else {
-              {{ (cabinetService.cabinetInfo()?.name ? cabinetService.cabinetInfo()?.name!.charAt(0).toUpperCase() : 'O') }}
-            }
-          </div>
-          <span 
-            class="text-lg font-bold tracking-tight text-ortho-navy transition-all duration-300 truncate max-w-[150px]"
-            [class.opacity-0]="isCollapsed()"
-            [class.w-0]="isCollapsed()"
-            [class.translate-x-[-10px]]="isCollapsed()"
-          >
-            {{ cabinetService.cabinetInfo()?.name || 'OrthoFlow' }}
-          </span>
+      <!-- Brand -->
+      <div class="flex h-16 shrink-0 items-center gap-3 overflow-hidden border-b border-white/10 px-4">
+        <div
+          class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-petrol-600 text-base font-extrabold text-white ring-1 ring-white/15"
+        >
+          @if (cabinet.cabinetInfo()?.logoUrl) {
+            <img [src]="cabinet.cabinetInfo()?.logoUrl" alt="" class="h-full w-full bg-white object-contain" />
+          } @else {
+            {{ initial() }}
+          }
+        </div>
+        <div
+          class="min-w-0 transition-[opacity,transform] duration-3 ease-out"
+          [class.opacity-0]="isCollapsed()"
+          [class.-translate-x-2]="isCollapsed()"
+        >
+          <p class="truncate text-base font-bold leading-tight text-white">
+            {{ cabinet.cabinetInfo()?.name || 'OrthoFlow' }}
+          </p>
+          <p class="truncate text-2xs font-bold uppercase tracking-[0.08em] text-petrol-300">
+            {{ 'NAV.PRACTICE_LABEL' | translate }}
+          </p>
         </div>
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 space-y-1 px-3 py-6 overflow-x-hidden">
-        @for (item of navItems; track item.key) {
-          <a 
-            [routerLink]="item.path"
-            routerLinkActive="nav-link-active"
-            [routerLinkActiveOptions]="{ exact: true }"
-            class="nav-link flex items-center gap-4 px-3 py-2.5 rounded-lg transition-all duration-200 group nav-link-inactive"
-            [title]="isCollapsed() ? (item.key | translate) : ''"
-          >
-            <span class="shrink-0 text-current flex items-center justify-center">
-              @switch (item.key) {
-                @case ('COMMON.OVERVIEW') { <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> }
-                @case ('COMMON.PATIENTS') { <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> }
-                @case ('COMMON.SCHEDULE') { <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> }
-                @case ('COMMON.BILLING') { <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg> }
-                @case ('COMMON.STOCK') { <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><polygon points="12 22.08 12 12 3 6.92 3 17.08 12 22.08"></polygon><polygon points="12 12 21 6.92 21 17.08 12 22.08"></polygon><polygon points="12 12 3 6.92 12 1.84 21 6.92 12 12"></polygon></svg> }
-                @case ('COMMON.TREATMENTS') { <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg> }
-                @case ('COMMON.ANALYTICS') { <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg> }
-                @case ('COMMON.SETTINGS') { <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg> }
-              }
-            </span>
-            
-            <span 
-              class="font-medium transition-all duration-300"
-              [class.opacity-0]="isCollapsed()"
-              [class.w-0]="isCollapsed()"
-              [class.translate-x-[-10px]]="isCollapsed()"
-            >
-              {{ item.key | translate }}
-            </span>
-          </a>
+      <nav
+        class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3"
+        [attr.aria-label]="'NAV.MAIN' | translate"
+      >
+        @for (group of navGroups; track group.key) {
+          <p class="nav-section" [class.sr-only]="isCollapsed()">{{ group.key | translate }}</p>
+          <ul class="space-y-0.5">
+            @for (item of group.items; track item.path) {
+              <li>
+                <a
+                  [routerLink]="item.path"
+                  routerLinkActive="nav-link-active"
+                  [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                  class="nav-link"
+                  [title]="isCollapsed() ? (item.key | translate) : ''"
+                >
+                  <app-icon [name]="item.icon" [size]="18" />
+                  <span
+                    class="truncate transition-[opacity,transform] duration-3 ease-out"
+                    [class.opacity-0]="isCollapsed()"
+                    [class.-translate-x-2]="isCollapsed()"
+                  >{{ item.key | translate }}</span>
+                </a>
+              </li>
+            }
+          </ul>
         }
       </nav>
- 
-      <!-- Sidebar Footer / Collapse Toggle -->
-      <div class="border-t border-ortho-navy/5 p-3">
-        <button 
+
+      <!-- Collapse -->
+      <div class="shrink-0 border-t border-white/10 p-2">
+        <button
+          type="button"
           (click)="toggleCollapse()"
-          class="flex w-full items-center justify-center rounded-lg py-2 text-ortho-navy/40 hover:bg-ortho-navy/5 hover:text-ortho-navy transition-colors group"
+          class="nav-link w-full justify-center"
+          [attr.aria-label]="(isCollapsed() ? 'COMMON.EXPAND_SIDEBAR' : 'COMMON.COLLAPSE_SIDEBAR') | translate"
+          [attr.aria-pressed]="isCollapsed()"
         >
-          <div 
-            class="transition-transform duration-500"
+          <span
+            class="inline-flex transition-transform duration-4 ease-in-out"
             [class.rotate-180]="isCollapsed()"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
-          </div>
+            <app-icon name="chevrons-left" [size]="18" />
+          </span>
         </button>
       </div>
     </aside>
@@ -87,20 +111,38 @@ import { CabinetService } from '../../core/services/cabinet.service';
 })
 export class SidebarComponent {
   readonly isCollapsed = signal(false);
-  public cabinetService = inject(CabinetService);
- 
-  readonly navItems = [
-    { key: 'COMMON.OVERVIEW', path: '/' },
-    { key: 'COMMON.PATIENTS', path: '/patients' },
-    { key: 'COMMON.SCHEDULE', path: '/schedule' },
-    { key: 'COMMON.BILLING', path: '/billing' },
-    { key: 'COMMON.STOCK', path: '/stock' },
-    { key: 'COMMON.TREATMENTS', path: '/treatments' },
-    { key: 'COMMON.ANALYTICS', path: '/analytics' },
-    { key: 'COMMON.SETTINGS', path: '/settings' },
+  readonly cabinet = inject(CabinetService);
+
+  readonly initial = computed(() => {
+    const name = this.cabinet.cabinetInfo()?.name?.trim();
+    return name ? name.charAt(0).toUpperCase() : 'O';
+  });
+
+  readonly navGroups: { key: string; items: NavItem[] }[] = [
+    {
+      key: 'NAV.CLINICAL',
+      items: [
+        { key: 'COMMON.OVERVIEW', path: '/', icon: 'grid', exact: true },
+        { key: 'COMMON.PATIENTS', path: '/patients', icon: 'users' },
+        { key: 'COMMON.SCHEDULE', path: '/schedule', icon: 'calendar' },
+        { key: 'COMMON.TREATMENTS', path: '/treatments', icon: 'activity' },
+      ],
+    },
+    {
+      key: 'NAV.PRACTICE',
+      items: [
+        { key: 'COMMON.BILLING', path: '/billing', icon: 'receipt' },
+        { key: 'COMMON.STOCK', path: '/stock', icon: 'box' },
+        { key: 'COMMON.ANALYTICS', path: '/analytics', icon: 'chart' },
+      ],
+    },
+    {
+      key: 'NAV.SYSTEM',
+      items: [{ key: 'COMMON.SETTINGS', path: '/settings', icon: 'settings' }],
+    },
   ];
 
-  toggleCollapse() {
+  toggleCollapse(): void {
     this.isCollapsed.set(!this.isCollapsed());
   }
 }

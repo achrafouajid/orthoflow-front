@@ -9,11 +9,11 @@
   "projects": {
     "orthoflow-front": {
       "projectType": "application",
-          "schematics": {
-            "@schematics/angular:component": {
-              "style": "css"
-            }
-          },
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "css"
+        }
+      },
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
@@ -31,10 +31,8 @@
               }
             ],
             "styles": [
+              "src/tokens.css",
               "src/styles.css"
-            ],
-            "scripts": [
-              "node_modules/apexcharts/dist/apexcharts.min.js"
             ]
           },
           "configurations": {
@@ -49,7 +47,7 @@
                 {
                   "type": "initial",
                   "maximumWarning": "2MB",
-                  "maximumError": "5MB"
+                  "maximumError": "3MB"
                 },
                 {
                   "type": "anyComponentStyle",

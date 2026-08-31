@@ -16,8 +16,18 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ToothState, ToothStatus } from '../../../core/models/patient.model';
-import { TOOTH_MESH_MAP } from '../../../core/models/tooth-mesh-map';
-import { DentalChartService } from '../../../core/services/dental-chart.service';
+import { toothStatusHex } from '../../../core/clinical/tooth-status';
+
+/**
+ * Resolves which FDI codes an arch's detected tooth groups should map to.
+ * Returns null — never a guessed/shifted sequence — unless the geometry
+ * produced exactly one group per FDI code in the sequence. Kept as a pure,
+ * exported function so the safety rule is unit-testable without a WebGL
+ * context or a loaded GLTF model.
+ */
+export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]): string[] | null {
+  return groupCount === fdiSequence.length ? fdiSequence : null;
+}
 
 @Component({
   selector: 'app-three-dental-viewer',
@@ -25,9 +35,17 @@ import { DentalChartService } from '../../../core/services/dental-chart.service'
   imports: [CommonModule],
   template: `
     <div class="viewer-container" #container>
-      <div *ngIf="loading" class="loading-overlay">
+      <div *ngIf="lazy && !isLazyLoaded" class="lazy-overlay" (mouseenter)="loadLazy()" (click)="loadLazy()">
+        <span class="material-icons text-3xl text-ortho-sky mb-2">three_d_rotation</span>
+        <span class="text-xs font-semibold text-slate-300">Click or Hover to Load 3D View</span>
+      </div>
+      <div *ngIf="loading && (!lazy || isLazyLoaded)" class="loading-overlay">
         <div class="spinner"></div>
         <span>Loading 3D Anatomy...</span>
+      </div>
+      <div *ngIf="!loading && mappingFailed" class="loading-overlay" role="alert">
+        <span class="material-icons text-3xl text-amber-400 mb-2">warning</span>
+        <span>3D model could not be mapped to FDI notation; use the 2D chart.</span>
       </div>
       <div class="canvas-wrapper" #canvasHolder></div>
     </div>
@@ -58,17 +76,36 @@ import { DentalChartService } from '../../../core/services/dental-chart.service'
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      color: #94a3b8;
+      color: #64748b;
       font-size: 0.85rem;
       gap: 0.75rem;
       z-index: 10;
       backdrop-filter: blur(4px);
     }
+    .lazy-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.75);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 5;
+      transition: background 0.3s ease;
+      backdrop-filter: blur(2px);
+    }
+    .lazy-overlay:hover {
+      background: rgba(15, 23, 42, 0.5);
+    }
     .spinner {
       width: 24px;
       height: 24px;
       border: 2px solid #334155;
-      border-top-color: #6366f1;
+      border-top-color: #03045e;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -82,6 +119,7 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
   @Input() teethStatus: Record<string, ToothState> = {};
   @Input() interactive: boolean = true;
   @Input() highlightedTooth: string | null = null;
+  @Input() lazy: boolean = false;
 
   @Output() toothClicked = new EventEmitter<string>();
   @Output() toothHovered = new EventEmitter<string | null>();
@@ -89,6 +127,11 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
   @ViewChild('canvasHolder', { static: true }) canvasHolder!: ElementRef<HTMLDivElement>;
 
   loading = true;
+  isLazyLoaded = false;
+  /** True when the shipped model's geometry could not be mapped to exactly
+   *  32 FDI-numbered teeth. Interaction is disabled rather than risk writing
+   *  a clinical finding against the wrong tooth. */
+  mappingFailed = false;
 
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
@@ -98,26 +141,60 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
 
-  private teethMeshes: Map<string, THREE.Object3D> = new Map();
+  private teethMeshes: Map<string, THREE.Object3D[]> = new Map();
+  private meshIdToFdi: Map<number, string> = new Map();
   private originalMaterials: Map<THREE.Object3D, any> = new Map();
   private animationFrameId?: number;
   private resizeObserver?: ResizeObserver;
+  private intersectionObserver?: IntersectionObserver;
   private hoveredMesh: THREE.Object3D | null = null;
+  /** Paused while the tab is hidden or the viewer is scrolled off-screen —
+   *  four of these could otherwise render at 60fps continuously regardless
+   *  of visibility (audit VI.3). */
+  private renderingPaused = false;
+  private readonly onVisibilityChange = () => {
+    this.renderingPaused = document.hidden;
+    if (!this.renderingPaused) this.animate();
+  };
 
   constructor(private ngZone: NgZone) {}
 
   ngOnInit() {
-    this.ngZone.runOutsideAngular(() => {
-      this.initThree();
-      this.loadModel();
-      this.animate();
-    });
+    if (!this.lazy) {
+      this.isLazyLoaded = true;
+      this.ngZone.runOutsideAngular(() => {
+        this.initThree();
+        this.loadModel();
+        this.animate();
+      });
+    } else {
+      this.loading = false;
+    }
 
     // Handle resizing
     this.resizeObserver = new ResizeObserver(() => {
       this.onResize();
     });
     this.resizeObserver.observe(this.canvasHolder.nativeElement);
+
+    this.intersectionObserver = new IntersectionObserver((entries) => {
+      const visible = entries[0]?.isIntersecting ?? true;
+      this.renderingPaused = !visible || document.hidden;
+      if (!this.renderingPaused) this.animate();
+    });
+    this.intersectionObserver.observe(this.canvasHolder.nativeElement);
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
+  }
+
+  loadLazy() {
+    if (this.isLazyLoaded) return;
+    this.isLazyLoaded = true;
+    this.loading = true;
+    this.ngZone.runOutsideAngular(() => {
+      this.initThree();
+      this.loadModel();
+      this.animate();
+    });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -127,20 +204,31 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
     if (changes['highlightedTooth']) {
       this.applyHighlight();
     }
+    if (changes['viewType'] && !changes['viewType'].firstChange) {
+      if (this.isLazyLoaded) {
+        this.setCameraPreset();
+        if (this.controls) {
+          this.controls.target.set(0, 0, 0);
+          this.controls.update();
+        }
+      }
+    }
   }
 
   ngOnDestroy() {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
     }
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
+    this.resizeObserver?.disconnect();
+    this.intersectionObserver?.disconnect();
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     if (this.controls) {
       this.controls.dispose();
     }
+    this.disposeScene();
     if (this.renderer) {
       this.renderer.dispose();
+      this.renderer.forceContextLoss();
     }
   }
 
@@ -213,16 +301,34 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
     }
   }
 
+  private static cachedModelPromise: Promise<THREE.Group> | null = null;
+
   private loadModel() {
     // We load the permanent dentition GLTF model for Top/Frontal,
     // or simulate/load suitable meshes as configured.
     // If loading fails, we fallback to generating a premium mock arch
     const modelUrl = '3d/permanent_dentition/scene.gltf';
 
-    this.loader.load(
-      modelUrl,
-      (gltf) => {
-        const model = gltf.scene;
+    if (!ThreeDentalViewerComponent.cachedModelPromise) {
+      ThreeDentalViewerComponent.cachedModelPromise = new Promise<THREE.Group>((resolve, reject) => {
+        this.loader.load(
+          modelUrl,
+          (gltf) => {
+            resolve(gltf.scene);
+          },
+          undefined,
+          (error) => {
+            ThreeDentalViewerComponent.cachedModelPromise = null; // Reset on failure so we can retry
+            reject(error);
+          }
+        );
+      });
+    }
+
+    ThreeDentalViewerComponent.cachedModelPromise.then(
+      (cachedScene) => {
+        // Clone the cached scene hierarchy
+        const model = cachedScene.clone(true);
         
         // Center & Scale model
         const box = new THREE.Box3().setFromObject(model);
@@ -236,36 +342,24 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
 
         this.scene.add(model);
 
-        // Traverse to find teeth meshes
+        // Enable shadows on every mesh. Material cloning (so distinct teeth
+        // don't share material state) and the FDI mapping both happen once,
+        // together, in mapTeethMeshesByPositions — cloning here too meant
+        // every material was cloned twice per load, with the first clone
+        // immediately discarded (audit VI.3).
         model.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             child.castShadow = true;
             child.receiveShadow = true;
-
-            // Map standard teeth to their FDI numbers
-            const meshName = child.name;
-            const fdiMatch = Object.entries(TOOTH_MESH_MAP).find(
-              ([_, info]) => meshName.toLowerCase().includes(info.meshName.toLowerCase()) || child.name.includes(info.meshName)
-            );
-
-            if (fdiMatch) {
-              const fdiId = fdiMatch[0];
-              this.teethMeshes.set(fdiId, child);
-              this.originalMaterials.set(child, child.material as any);
-            }
           }
         });
 
-        // If no explicit matching occurred due to mesh names inside the GLTF, map them programmatically by position
-        if (this.teethMeshes.size === 0) {
-          this.mapTeethMeshesByPositions(model);
-        }
+        this.mapTeethMeshesByPositions(model);
 
         this.loading = false;
         this.applyColors();
         this.applyHighlight();
       },
-      undefined,
       (error) => {
         console.warn('Failed to load 3D GLTF model. Rendering high-fidelity procedural arch instead.', error);
         this.generateProceduralArch();
@@ -305,29 +399,156 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
       mesh.name = `Tooth_${fdi}`;
 
       group.add(mesh);
-      this.teethMeshes.set(fdi, mesh);
+      this.teethMeshes.set(fdi, [mesh]);
       this.originalMaterials.set(mesh, mat as any);
     }
 
     this.scene.add(group);
+    this.rebuildMeshIndex();
   }
 
   private mapTeethMeshesByPositions(model: THREE.Object3D) {
     const meshes: THREE.Mesh[] = [];
     model.traverse((child) => {
       if (child instanceof THREE.Mesh) {
+        if (child.material) {
+          child.material = (child.material as THREE.Material).clone();
+        }
         meshes.push(child);
       }
     });
 
-    // Map meshes to standard adult teeth based on x/y/z layout
-    meshes.sort((a, b) => a.position.x - b.position.x);
-    meshes.forEach((mesh, idx) => {
-      const isUpper = mesh.position.y > 0;
-      const fdi = this.getFdiFromArchIndex(idx % 16, isUpper);
-      this.teethMeshes.set(fdi, mesh);
-      this.originalMaterials.set(mesh, mesh.material as any);
+    // Helper to get true bounding box center
+    const getMeshBox = (obj: THREE.Object3D) => {
+      const box = new THREE.Box3().setFromObject(obj);
+      return box;
+    };
+
+    // Filter out obvious non-tooth geometry based on size and name
+    const validTeethMeshes = meshes.filter(mesh => {
+      const box = getMeshBox(mesh);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      
+      const nameLower = mesh.name.toLowerCase();
+      if (nameLower.includes('gum') || nameLower.includes('jaw') || nameLower.includes('bone')) {
+        return false;
+      }
+      
+      // If a mesh spans more than 4.0 units (entire arch is ~10), it's likely gums/jaw
+      if (size.x > 4.0 || size.z > 4.0) {
+        return false;
+      }
+      return true;
     });
+
+    // Partition into upper and lower by checking Y coordinate
+    // The model is centered at origin, so occlusal plane is roughly Y=0
+    const upperMeshes: THREE.Mesh[] = [];
+    const lowerMeshes: THREE.Mesh[] = [];
+
+    validTeethMeshes.forEach(mesh => {
+      const box = getMeshBox(mesh);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      
+      if (center.y > 0) {
+        upperMeshes.push(mesh);
+      } else {
+        lowerMeshes.push(mesh);
+      }
+    });
+
+    const getXWorld = (obj: THREE.Object3D) => {
+      const box = getMeshBox(obj);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      return center.x;
+    };
+
+    // Sort from left of screen to right of screen
+    upperMeshes.sort((a, b) => getXWorld(a) - getXWorld(b));
+    lowerMeshes.sort((a, b) => getXWorld(a) - getXWorld(b));
+
+    // Group meshes that belong to the same tooth (X centers are very close)
+    const groupMeshes = (meshList: THREE.Mesh[]): THREE.Mesh[][] => {
+      const groups: THREE.Mesh[][] = [];
+      meshList.forEach(mesh => {
+        if (groups.length === 0) {
+          groups.push([mesh]);
+        } else {
+          const lastGroup = groups[groups.length - 1];
+          if (Math.abs(getXWorld(mesh) - getXWorld(lastGroup[0])) < 0.3) {
+            lastGroup.push(mesh);
+          } else {
+            groups.push([mesh]);
+          }
+        }
+      });
+      return groups;
+    };
+
+    const upperGroups = groupMeshes(upperMeshes);
+    const lowerGroups = groupMeshes(lowerMeshes);
+
+    // FDI Upper sequence (from patient's right 18 to left 28)
+    const upperFDI = [
+      '18', '17', '16', '15', '14', '13', '12', '11',
+      '21', '22', '23', '24', '25', '26', '27', '28'
+    ];
+
+    // FDI Lower sequence (from patient's right 48 to left 38)
+    const lowerFDI = [
+      '48', '47', '46', '45', '44', '43', '42', '41',
+      '31', '32', '33', '34', '35', '36', '37', '38'
+    ];
+
+    // Safety-critical: never guess a tooth's identity. A clinical status
+    // written against the wrong tooth is a patient-safety defect, so an arch
+    // is only mapped when the geometry produced EXACTLY the 16 groups an
+    // adult arch has — no shifting, no partial mapping. See
+    // resolveArchFdiSequence for the pure, unit-testable validation rule.
+    const upperFdis = resolveArchFdiSequence(upperGroups.length, upperFDI);
+    const lowerFdis = resolveArchFdiSequence(lowerGroups.length, lowerFDI);
+
+    const applyMapping = (groups: THREE.Mesh[][], fdis: string[]) => {
+      groups.forEach((groupMeshes, idx) => {
+        const fdi = fdis[idx];
+        this.teethMeshes.set(fdi, groupMeshes);
+        groupMeshes.forEach(mesh => {
+          this.originalMaterials.set(mesh, mesh.material as any);
+          mesh.name = `Tooth_${fdi}`;
+        });
+      });
+    };
+
+    if (upperFdis && lowerFdis) {
+      applyMapping(upperGroups, upperFdis);
+      applyMapping(lowerGroups, lowerFdis);
+      this.mappingFailed = false;
+    } else {
+      // Fail loudly rather than writing a clinical finding to the wrong
+      // tooth. The template disables interaction and points to the 2D chart.
+      console.error(
+        `3D tooth mapping failed: expected 16 upper + 16 lower groups, got ${upperGroups.length} upper / ${lowerGroups.length} lower.`
+      );
+      this.teethMeshes.clear();
+      this.mappingFailed = true;
+    }
+    this.rebuildMeshIndex();
+  }
+
+  /** O(1) mesh→FDI lookups for the raycast hit-test — previously
+   *  findFdiByMesh walked every tooth's mesh list and called getObjectById
+   *  on each, run on every mousemove (audit VI.3). */
+  private rebuildMeshIndex() {
+    this.meshIdToFdi.clear();
+    for (const [fdi, meshes] of this.teethMeshes.entries()) {
+      for (const mesh of meshes) {
+        this.meshIdToFdi.set(mesh.id, fdi);
+        mesh.traverse((child) => this.meshIdToFdi.set(child.id, fdi));
+      }
+    }
   }
 
   private getFdiFromArchIndex(index: number, isUpper: boolean): string {
@@ -341,56 +562,73 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
   }
 
   private applyColors() {
-    this.teethMeshes.forEach((mesh, fdi) => {
+    this.teethMeshes.forEach((meshes, fdi) => {
       const toothState = this.teethStatus[fdi];
       const status = toothState?.status || 'present';
-      const colorHex = DentalChartService.STATUS_COLORS[status];
+      // A WebGL material takes one flat colour — the family colour from
+      // core/clinical/tooth-status.ts, the same source the 2D chart's
+      // pattern fills derive from. null means "sound", keep the enamel look.
+      const colorHex = toothStatusHex(status);
 
-      const material = (mesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
-      if (material) {
-        if (status === 'present' || colorHex === 'none') {
-          material.color.setHex(0xf8fafc); // Premium Off-white tooth color
-          material.transparent = false;
-          material.opacity = 1.0;
-        } else {
-          material.color.setStyle(colorHex);
-          if (status === 'extracted' || status === 'missing') {
-            material.transparent = true;
-            material.opacity = 0.15;
-          } else {
+      meshes.forEach(mesh => {
+        const material = (mesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
+        if (material) {
+          if (colorHex === null) {
+            material.color.setHex(0xf8fafc); // Premium Off-white tooth color
             material.transparent = false;
-            material.opacity = 0.8;
+            material.opacity = 1.0;
+          } else {
+            material.color.setHex(colorHex);
+            if (status === 'extracted' || status === 'missing') {
+              material.transparent = true;
+              material.opacity = 0.15;
+            } else {
+              material.transparent = false;
+              material.opacity = 0.8;
+            }
           }
+          material.needsUpdate = true;
         }
-        material.needsUpdate = true;
-      }
+      });
     });
   }
 
   private applyHighlight() {
-    this.teethMeshes.forEach((mesh, fdi) => {
+    this.teethMeshes.forEach((meshes, fdi) => {
       const isHighlighted = this.highlightedTooth === fdi;
-      const material = (mesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      
+      meshes.forEach(mesh => {
+        const material = (mesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
 
-      if (material) {
-        if (isHighlighted) {
-          material.emissive.setHex(0x6366f1); // Glowing indigo highlight
-          material.emissiveIntensity = 0.8;
-        } else {
-          material.emissive.setHex(0x000000);
-          material.emissiveIntensity = 0;
+        if (material) {
+          if (isHighlighted) {
+            material.emissive.setHex(0x6366f1); // Glowing indigo highlight
+            material.emissiveIntensity = 0.8;
+          } else {
+            material.emissive.setHex(0x000000);
+            material.emissiveIntensity = 0;
+          }
         }
-      }
+      });
     });
   }
 
+  private lastMouseMoveAt = 0;
+
   private onMouseMove(event: MouseEvent) {
+    // Throttled to ~30Hz — raycasting on every native mousemove event ran
+    // far more often than the eye needs for a hover highlight (audit VI.3).
+    const now = performance.now();
+    if (now - this.lastMouseMoveAt < 33) return;
+    this.lastMouseMoveAt = now;
+
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(Array.from(this.teethMeshes.values()), true);
+    const allMeshes = Array.from(this.teethMeshes.values()).flat();
+    const intersects = this.raycaster.intersectObjects(allMeshes, true);
 
     if (intersects.length > 0) {
       let hitMesh = intersects[0].object;
@@ -423,7 +661,8 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(Array.from(this.teethMeshes.values()), true);
+    const allMeshes = Array.from(this.teethMeshes.values()).flat();
+    const intersects = this.raycaster.intersectObjects(allMeshes, true);
 
     if (intersects.length > 0) {
       let hitMesh = intersects[0].object;
@@ -441,15 +680,14 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
   }
 
   private findFdiByMesh(mesh: THREE.Object3D): string | null {
-    for (const [fdi, item] of this.teethMeshes.entries()) {
-      if (item === mesh || item.getObjectById(mesh.id)) {
-        return fdi;
-      }
-    }
-    return null;
+    return this.meshIdToFdi.get(mesh.id) ?? null;
   }
 
   private onResize() {
+    // In lazy mode initThree() hasn't run yet the first time the
+    // ResizeObserver fires, so `camera`/`renderer` don't exist (audit VI.3).
+    if (!this.camera || !this.renderer) return;
+
     const width = this.canvasHolder.nativeElement.clientWidth;
     const height = this.canvasHolder.nativeElement.clientHeight;
 
@@ -459,8 +697,13 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
   }
 
   private animate() {
+    if (this.animationFrameId) return; // already looping
     this.ngZone.runOutsideAngular(() => {
       const render = () => {
+        if (this.renderingPaused) {
+          this.animationFrameId = undefined;
+          return; // resumed by the visibility/intersection observers
+        }
         this.animationFrameId = requestAnimationFrame(render);
         if (this.controls) {
           this.controls.update();
@@ -468,6 +711,31 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
         this.renderer.render(this.scene, this.camera);
       };
       render();
+    });
+  }
+
+  /** Frees GPU resources on destroy — geometries, materials and textures
+   *  were previously left behind, and with four viewers per patient this
+   *  exhausted the browser's ~16-context WebGL budget after a handful of
+   *  patient visits (audit III.5/VI.3). */
+  private disposeScene() {
+    if (!this.scene) return;
+    this.scene.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.geometry) {
+        mesh.geometry.dispose();
+      }
+      const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+      const materials = Array.isArray(material) ? material : material ? [material] : [];
+      for (const mat of materials) {
+        for (const key of Object.keys(mat)) {
+          const value = (mat as any)[key];
+          if (value && value instanceof THREE.Texture) {
+            value.dispose();
+          }
+        }
+        mat.dispose();
+      }
     });
   }
 }

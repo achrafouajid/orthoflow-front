@@ -1,5 +1,10 @@
+import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ThreeDentalSyncService } from './three-dental-sync.service';
+import { DentalChartService } from './dental-chart.service';
 import { ToothState } from '../models/patient.model';
 
 describe('ThreeDentalSyncService', () => {
@@ -12,7 +17,15 @@ describe('ThreeDentalSyncService', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    service = new ThreeDentalSyncService();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        DentalChartService,
+        ThreeDentalSyncService,
+      ]
+    });
+    service = TestBed.inject(ThreeDentalSyncService);
   });
 
   afterEach(() => {

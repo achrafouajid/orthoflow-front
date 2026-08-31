@@ -1,28 +1,19 @@
-import { Patient } from './patient.model';
-import { Treatment, StockItem } from './stock.model';
+/**
+ * Treatment sessions recorded against a patient.
+ *
+ * Re-exported from `core/api/contract`. The hand-written version this replaces
+ * declared `patient?: Patient` — a nested patient object. The server sends
+ * `patientId` and nothing else: `PatientTreatmentResponse` has never contained
+ * a nested patient. Anything reading `treatment.patient.firstName` was reading
+ * `undefined`.
+ */
+export type {
+  PatientTreatment,
+  PatientTreatmentRequest,
+} from '../api/contract';
 
-export type PatientTreatmentStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+import type { PatientTreatment } from '../api/contract';
 
-export interface PatientTreatmentConsumable {
-  id?: string;
-  stockItem: StockItem;
-  quantityUsed: number;
-  pricePerUnit: number;
-  notes?: string;
-}
-
-export interface PatientTreatment {
-  id?: string;
-  patient?: Patient;
-  treatment: Treatment;
-  teeth: string; // Comma-separated list of FDI tooth numbers
-  status: PatientTreatmentStatus;
-  progress: number; // 0 to 100
-  notes?: string;
-  doctorName?: string;
-  startDate?: string;
-  endDate?: string;
-  consumables?: PatientTreatmentConsumable[];
-  createdAt?: string;
-  updatedAt?: string;
-}
+export type PatientTreatmentStatus = NonNullable<PatientTreatment['status']>;
+export type PatientTreatmentConsumable =
+  NonNullable<PatientTreatment['consumables']>[number];

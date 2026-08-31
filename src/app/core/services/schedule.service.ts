@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Appointment } from '../models/patient.model';
+import { Appointment, Chair } from '../models/patient.model';
 import { ScheduleApiService } from './schedule-api.service';
 import { finalize, tap, Observable } from 'rxjs';
 
@@ -8,60 +8,51 @@ import { finalize, tap, Observable } from 'rxjs';
 })
 export class ScheduleService {
   private api = inject(ScheduleApiService);
-  
+
   private appointmentsSignal = signal<Appointment[]>([]);
   private loadingSignal = signal<boolean>(false);
-  
+  private errorSignal = signal<string | null>(null);
+  private chairsSignal = signal<Chair[]>([]);
+
   appointments = computed(() => this.appointmentsSignal());
   loading = computed(() => this.loadingSignal());
+  error = computed(() => this.errorSignal());
+  chairs = computed(() => this.chairsSignal());
 
   constructor() {
     this.refreshAppointments();
+    this.api.getChairs().subscribe({
+      next: (chairs) => this.chairsSignal.set(chairs),
+      error: (err) => console.error('Failed to load chairs', err)
+    });
   }
 
-  refreshAppointments(): void {
+  /**
+   * Defaults to a bounded window (3 months back, 6 months ahead) instead of
+   * the entire appointment history — that used to be loaded in full and
+   * filtered client-side to render a single day (audit II.8/VI.4). Pass an
+   * explicit range for a narrower or wider fetch.
+   */
+  refreshAppointments(range?: { from: Date; to: Date }): void {
+    const effectiveRange = range ?? this.defaultRange();
     this.loadingSignal.set(true);
-    this.api.getAppointments()
+    this.errorSignal.set(null);
+    this.api.getAppointments(effectiveRange)
       .pipe(finalize(() => this.loadingSignal.set(false)))
       .subscribe({
         next: (apps) => this.appointmentsSignal.set(apps),
         error: (err) => {
           console.error('Failed to load appointments', err);
-          this.loadMockAppointments();
+          this.errorSignal.set('Failed to load appointments.');
         }
       });
   }
 
-  loadMockAppointments() {
-    const today = new Date();
-    const mockAppointments: Appointment[] = [
-      {
-        id: 'a1',
-        patientId: '1',
-        dateTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0).toISOString(),
-        type: 'Checkup',
-        status: 'SCHEDULED',
-        notes: 'Check aligner fit (step 5)',
-        applianceStep: 5
-      },
-      {
-        id: 'a2',
-        patientId: '2',
-        dateTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 14, 30).toISOString(),
-        type: 'Initial Fit',
-        status: 'SCHEDULED',
-        notes: 'Delivery of first set of aligners'
-      },
-      {
-        id: 'a3',
-        patientId: '1',
-        dateTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 11, 0).toISOString(),
-        type: 'Emergency',
-        status: 'COMPLETED',
-        notes: 'Fixed broken attachment'
-      }
-    ];
-    this.appointmentsSignal.set(mockAppointments);
+  private defaultRange(): { from: Date; to: Date } {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 7, 0);
+    return { from, to };
   }
 
   getAppointmentsByRange(start: Date, end: Date) {

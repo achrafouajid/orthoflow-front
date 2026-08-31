@@ -5,6 +5,9 @@ import { InvoiceService } from '../../services/invoice.service';
 import { Invoice, Payment } from '../../models/billing.model';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { ToastService } from '../../../../core/services/toast.service';
+import { downloadInvoicePdf } from '../../../../core/utils/invoice-pdf';
+import { PatientService } from '../../../../core/services/patient.service';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -15,8 +18,8 @@ import { TranslateModule } from '@ngx-translate/core';
       <div class="invoice-detail-container">
         <header class="page-header">
           <div class="header-content">
-            <button class="back-btn" routerLink="..">
-              <span class="material-icons">arrow_back</span>
+            <button type="button" class="back-btn" [attr.aria-label]="'COMMON.BACK' | translate" routerLink="..">
+              <span class="material-icons" aria-hidden="true">arrow_back</span>
             </button>
             <div class="title-with-status">
               <h1>{{ 'BILLING.INVOICE_NUMBER' | translate }} {{ inv.invoiceNumber }}</h1>
@@ -26,16 +29,16 @@ import { TranslateModule } from '@ngx-translate/core';
             </div>
           </div>
           <div class="header-actions">
-            <button class="btn-secondary">
+            <button type="button" class="btn-secondary" (click)="downloadPdf(inv)">
               <span class="material-icons">download</span>
               PDF
             </button>
-            <button class="btn-secondary">
+            <button type="button" class="btn-secondary">
               <span class="material-icons">email</span>
               Send
             </button>
             @if (inv.status === 'DRAFT') {
-              <button class="btn-primary">Edit Invoice</button>
+              <button type="button" class="btn-primary">Edit Invoice</button>
             }
           </div>
         </header>
@@ -49,7 +52,7 @@ import { TranslateModule } from '@ngx-translate/core';
               <div class="card-body info-grid">
                 <div class="info-group">
                   <label>Bill To</label>
-                  <span class="info-value">{{ inv.patientName }}</span>
+                  <span class="info-value">{{ patients.nameFor(inv.patientId) || '—' }}</span>
                   <span class="info-sub">{{ 'PATIENTS.NAME' | translate }} ID: {{ inv.patientId }}</span>
                 </div>
                 <div class="info-group">
@@ -158,7 +161,7 @@ import { TranslateModule } from '@ngx-translate/core';
                 </span>
               </div>
               @if (remainingBalance() > 0) {
-                <button class="btn-primary full-width" (click)="showPaymentForm.set(true)">
+                <button type="button" class="btn-primary full-width" (click)="showPaymentForm.set(true)">
                   <span class="material-icons">add</span>
                   {{ 'BILLING.RECORD_PAYMENT' | translate }}
                 </button>
@@ -169,8 +172,8 @@ import { TranslateModule } from '@ngx-translate/core';
               <div class="card payment-form-card">
                 <div class="card-header">
                   <h3>{{ 'BILLING.RECORD_PAYMENT' | translate }}</h3>
-                  <button class="icon-btn" (click)="showPaymentForm.set(false)">
-                    <span class="material-icons">close</span>
+                  <button type="button" class="icon-btn" [attr.aria-label]="'COMMON.CLOSE' | translate" (click)="showPaymentForm.set(false)">
+                    <span class="material-icons" aria-hidden="true">close</span>
                   </button>
                 </div>
                 <div class="card-body">
@@ -191,7 +194,7 @@ import { TranslateModule } from '@ngx-translate/core';
                     <label>{{ 'BILLING.REFERENCE' | translate }}</label>
                     <input type="text" [(ngModel)]="paymentRef" class="form-control" [placeholder]="'COMMON.OPTIONAL' | translate">
                   </div>
-                  <button class="btn-primary full-width mt-4" (click)="recordPayment()">
+                  <button type="button" class="btn-primary full-width mt-4" (click)="recordPayment()">
                     {{ 'COMMON.SUBMIT' | translate }}
                   </button>
                 </div>
@@ -226,16 +229,21 @@ import { TranslateModule } from '@ngx-translate/core';
 
     .back-btn {
       background: white;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgb(var(--ink-200));
       border-radius: 12px;
       padding: 0.5rem;
+      min-width: 44px;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       display: flex;
-      color: #6b7280;
+      color: rgb(var(--ink-500));
       transition: all 0.2s;
     }
 
-    .back-btn:hover { background: #f9fafb; color: #4f46e5; }
+    .back-btn:hover { background: rgb(var(--ink-50)); color: rgb(var(--petrol-900)); }
+    .back-btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
     .title-with-status {
       display: flex;
@@ -247,51 +255,12 @@ import { TranslateModule } from '@ngx-translate/core';
       margin: 0;
       font-size: 1.875rem;
       font-weight: 700;
-      color: #111827;
+      color: rgb(var(--ink-900));
     }
-
-    .status-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .status-badge.draft { background: #f3f4f6; color: #374151; }
-    .status-badge.sent { background: #e0e7ff; color: #4338ca; }
-    .status-badge.partially-paid { background: #fef3c7; color: #92400e; }
-    .status-badge.paid { background: #dcfce7; color: #166534; }
 
     .header-actions {
       display: flex;
       gap: 0.75rem;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      color: white;
-      border: none;
-      padding: 0.75rem 1.25rem;
-      border-radius: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-    }
-
-    .btn-secondary {
-      background: white;
-      border: 1px solid #e5e7eb;
-      color: #374151;
-      padding: 0.75rem 1.25rem;
-      border-radius: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
     }
 
     .detail-grid {
@@ -303,14 +272,14 @@ import { TranslateModule } from '@ngx-translate/core';
     .card {
       background: white;
       border-radius: 16px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgb(var(--ink-200));
       margin-bottom: 1.5rem;
       overflow: hidden;
     }
 
     .card-header {
       padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid #f3f4f6;
+      border-bottom: 1px solid rgb(var(--ink-100));
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -320,7 +289,7 @@ import { TranslateModule } from '@ngx-translate/core';
       margin: 0;
       font-size: 1rem;
       font-weight: 600;
-      color: #111827;
+      color: rgb(var(--ink-900));
     }
 
     .card-body {
@@ -342,19 +311,19 @@ import { TranslateModule } from '@ngx-translate/core';
     .info-group label {
       font-size: 0.75rem;
       font-weight: 600;
-      color: #6b7280;
+      color: rgb(var(--ink-500));
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
     .info-value {
       font-weight: 600;
-      color: #111827;
+      color: rgb(var(--ink-900));
     }
 
     .info-sub {
       font-size: 0.875rem;
-      color: #6b7280;
+      color: rgb(var(--ink-500));
     }
 
     .items-table {
@@ -363,18 +332,18 @@ import { TranslateModule } from '@ngx-translate/core';
     }
 
     .items-table th {
-      background: #f9fafb;
+      background: rgb(var(--ink-50));
       padding: 0.75rem 1.5rem;
       font-size: 0.75rem;
       font-weight: 600;
-      color: #6b7280;
+      color: rgb(var(--ink-500));
       text-transform: uppercase;
     }
 
     .items-table td {
       padding: 1rem 1.5rem;
-      border-bottom: 1px solid #f3f4f6;
-      color: #374151;
+      border-bottom: 1px solid rgb(var(--ink-100));
+      color: rgb(var(--ink-700));
     }
 
     .text-right { text-align: right; }
@@ -393,19 +362,19 @@ import { TranslateModule } from '@ngx-translate/core';
       justify-content: space-between;
       width: 250px;
       font-size: 0.95rem;
-      color: #4b5563;
+      color: rgb(var(--ink-600));
     }
 
     .total-row.grand-total {
       margin-top: 0.5rem;
       padding-top: 1rem;
-      border-top: 2px solid #f3f4f6;
+      border-top: 2px solid rgb(var(--ink-100));
       font-size: 1.25rem;
       font-weight: 700;
-      color: #111827;
+      color: rgb(var(--ink-900));
     }
 
-    .text-success { color: #059669; }
+    .text-success { color: rgb(var(--positive-600)); }
 
     .payment-timeline {
       display: flex;
@@ -423,8 +392,8 @@ import { TranslateModule } from '@ngx-translate/core';
       width: 36px;
       height: 36px;
       border-radius: 10px;
-      background: #f3f4f6;
-      color: #4b5563;
+      background: rgb(var(--ink-100));
+      color: rgb(var(--ink-600));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -440,13 +409,13 @@ import { TranslateModule } from '@ngx-translate/core';
       margin-bottom: 0.125rem;
     }
 
-    .payment-amount { font-weight: 600; color: #111827; }
-    .payment-method { font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; }
-    .payment-meta { font-size: 0.8125rem; color: #6b7280; display: flex; gap: 0.5rem; }
+    .payment-amount { font-weight: 600; color: rgb(var(--ink-900)); }
+    .payment-method { font-size: 0.75rem; font-weight: 600; color: rgb(var(--ink-500)); text-transform: uppercase; }
+    .payment-meta { font-size: 0.8125rem; color: rgb(var(--ink-500)); display: flex; gap: 0.5rem; }
 
     .balance-card {
       padding: 1.5rem;
-      background: #1e293b;
+      background: rgb(var(--ink-900));
       color: white;
       border: none;
     }
@@ -459,13 +428,13 @@ import { TranslateModule } from '@ngx-translate/core';
 
     .balance-label { font-size: 0.875rem; opacity: 0.8; }
     .balance-value { font-size: 2rem; font-weight: 700; }
-    .balance-value.paid { color: #4ade80; }
+    .balance-value.paid { color: rgb(var(--positive-700)); }
 
     .full-width { width: 100%; justify-content: center; }
 
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 500; }
-    .form-control { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; outline: none; }
+    .form-control { width: 100%; padding: 0.75rem; border: 1px solid rgb(var(--ink-300)); border-radius: 8px; outline: none; }
 
     .mt-4 { margin-top: 1rem; }
 
@@ -477,6 +446,13 @@ import { TranslateModule } from '@ngx-translate/core';
 export class InvoiceDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private invoiceService = inject(InvoiceService);
+  /** Read by the template to resolve the patient name off `patientId`. */
+  protected patients = inject(PatientService);
+  private toast = inject(ToastService);
+
+  downloadPdf(invoice: Invoice): void {
+    downloadInvoicePdf(invoice, this.patients.nameFor(invoice.patientId));
+  }
 
   invoice = signal<Invoice | null>(null);
   showPaymentForm = signal(false);
@@ -500,8 +476,10 @@ export class InvoiceDetailComponent implements OnInit {
   calculateBalance() {
     const inv = this.invoice();
     if (inv) {
-      const paid = inv.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-      this.remainingBalance.set(inv.total - paid);
+      // Prefer the server-computed balanceDue (backend now returns payments
+      // with every invoice); fall back to summing payments client-side.
+      const balance = inv.balanceDue ?? (inv.total - (inv.payments?.reduce((sum, p) => sum + p.amount, 0) || 0));
+      this.remainingBalance.set(Math.max(0, balance));
       this.paymentAmount = this.remainingBalance();
     }
   }
@@ -527,7 +505,7 @@ export class InvoiceDetailComponent implements OnInit {
         },
         error: (err) => {
           console.error('Failed to record payment', err);
-          alert('Failed to record payment');
+          this.toast.error(err.error?.detail || err.error?.message || 'Failed to record payment');
         }
       });
     }

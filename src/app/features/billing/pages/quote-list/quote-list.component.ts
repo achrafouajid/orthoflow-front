@@ -12,15 +12,15 @@ import { InvoiceService } from '../../services/invoice.service';
     <div class="billing-container">
       <header class="page-header">
         <div class="header-content">
-          <button class="back-btn" routerLink="/billing/invoices">
-            <span class="material-icons">arrow_back</span>
+          <button type="button" class="back-btn" [attr.aria-label]="'COMMON.BACK' | translate" routerLink="/billing/invoices">
+            <span class="material-icons" aria-hidden="true">arrow_back</span>
           </button>
           <div class="title-meta">
             <h1>{{ 'BILLING.QUOTES_TITLE' | translate }}</h1>
             <p>{{ 'BILLING.QUOTES_SUBTITLE' | translate }}</p>
           </div>
         </div>
-        <button class="btn-primary">
+        <button type="button" class="btn-primary">
           <span class="material-icons">add</span>
           {{ 'BILLING.NEW_QUOTE' | translate }}
         </button>
@@ -54,11 +54,11 @@ import { InvoiceService } from '../../services/invoice.service';
                 <td><span class="amount">{{ quote.total | number:'1.2-2' }} {{ quote.currency }}</span></td>
                 <td>
                   <div class="row-actions">
-                    <button class="icon-btn" [title]="'BILLING.ACCEPT_CONVERT' | translate">
-                      <span class="material-icons">check_circle</span>
+                    <button type="button" class="icon-btn" [title]="'BILLING.ACCEPT_CONVERT' | translate" [attr.aria-label]="'BILLING.ACCEPT_CONVERT' | translate">
+                      <span class="material-icons" aria-hidden="true">check_circle</span>
                     </button>
-                    <button class="icon-btn" [title]="'BILLING.DOWNLOAD_PDF' | translate">
-                      <span class="material-icons">download</span>
+                    <button type="button" class="icon-btn" [title]="'BILLING.DOWNLOAD_PDF' | translate" [attr.aria-label]="'BILLING.DOWNLOAD_PDF' | translate">
+                      <span class="material-icons" aria-hidden="true">download</span>
                     </button>
                   </div>
                 </td>
@@ -74,27 +74,18 @@ import { InvoiceService } from '../../services/invoice.service';
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
     .header-content { display: flex; align-items: center; gap: 1.5rem; }
     .header-content h1 { margin: 0; font-size: 1.875rem; font-weight: 700; }
-    .back-btn { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 0.5rem; cursor: pointer; display: flex; color: #6b7280; }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      color: white; border: none; padding: 0.75rem 1.25rem; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
-    }
+    .back-btn { background: white; border: 1px solid rgb(var(--ink-200)); border-radius: 12px; padding: 0.5rem; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; cursor: pointer; display: flex; color: rgb(var(--ink-500)); }
+    .back-btn:focus-visible, .icon-btn:focus-visible, .btn-primary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-    .table-card { background: white; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden; }
+    .table-card { background: white; border-radius: 16px; border: 1px solid rgb(var(--ink-200)); overflow: hidden; }
     .billing-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .billing-table th { background: #f9fafb; padding: 1rem 1.5rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; }
-    .billing-table td { padding: 1.25rem 1.5rem; border-top: 1px solid #f3f4f6; }
+    .billing-table th { background: rgb(var(--ink-50)); padding: 1rem 1.5rem; font-size: 0.75rem; font-weight: 600; color: rgb(var(--ink-500)); text-transform: uppercase; }
+    .billing-table td { padding: 1.25rem 1.5rem; border-top: 1px solid rgb(var(--ink-100)); }
     
-    .quote-number { font-weight: 600; color: #4f46e5; }
-    .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-    .status-badge.pending { background: #fef3c7; color: #92400e; }
-    .status-badge.accepted { background: #dcfce7; color: #166534; }
+    .quote-number { font-weight: 600; color: rgb(var(--petrol-900)); }
     
-    .amount { font-weight: 700; color: #111827; }
+    .amount { font-weight: 700; color: rgb(var(--ink-900)); }
     .row-actions { display: flex; gap: 0.5rem; }
-    .icon-btn { background: transparent; border: none; color: #9ca3af; padding: 0.5rem; border-radius: 8px; cursor: pointer; }
-    .icon-btn:hover { color: #4f46e5; background: #f3f4f6; }
   `]
 })
 export class QuoteListComponent {

@@ -1,10 +1,19 @@
 import { Routes } from '@angular/router';
 import { onboardingGuard } from './core/guards/onboarding.guard';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login-page.component').then(m => m.LoginPageComponent),
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./features/auth/forgot-password-page.component').then(m => m.ForgotPasswordPageComponent),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () => import('./features/auth/reset-password-page.component').then(m => m.ResetPasswordPageComponent),
   },
   {
     path: 'landing',
@@ -18,7 +27,12 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
-    canActivate: [onboardingGuard],
+    // onboardingGuard must run before authGuard: a fresh install has no user
+    // account yet, so checking auth first sent every unauthenticated visitor
+    // straight to /login with no path to onboarding — and onboarding is the
+    // only place that can create the first account. Once onboarded, this
+    // guard passes through to authGuard as before.
+    canActivate: [onboardingGuard, authGuard],
     children: [
       {
         path: '',

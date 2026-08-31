@@ -2,15 +2,20 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service';
+import { AuthApiService } from '../../core/services/auth-api.service';
+import { AuthService } from '../../core/services/auth.service';
+import { LanguageService } from '../../core/services/language.service';
+import { ToastService } from '../../core/services/toast.service';
+import { readAndValidateLogo, LogoValidationError } from '../../core/utils/logo-upload';
 
 @Component({
   selector: 'app-onboarding',
   standalone: true,
   imports: [CommonModule, FormsModule, TranslateModule],
   template: `
-    <main class="h-screen w-screen bg-[#f8fafc] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col justify-between items-center overflow-hidden p-6 relative select-none">
+    <main class="h-screen w-screen bg-[rgb(var(--ink-50))] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col justify-between items-center overflow-hidden p-6 relative select-none">
       
       <!-- Background decorative gradients matching webapp -->
       <div class="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-ortho-sky/10 blur-3xl"></div>
@@ -19,17 +24,17 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
       <!-- App Header logo / name -->
       <header class="w-full max-w-md flex justify-between items-center z-10 shrink-0">
         <div class="flex items-center gap-2">
-          <div class="h-8 w-8 rounded-lg bg-ortho-navy flex items-center justify-center text-white font-extrabold text-sm shadow-md">O</div>
-          <span class="font-extrabold tracking-tight text-ortho-navy dark:text-white text-base">OrthoFlow</span>
+          <div class="h-8 w-8 rounded-lg bg-petrol-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md">O</div>
+          <span class="font-extrabold tracking-tight text-ink-900 dark:text-white text-base">OrthoFlow</span>
         </div>
         
         <!-- Language selector -->
-        <div class="flex gap-2 text-xs font-semibold text-slate-400">
-          <button (click)="changeLang('fr')" class="hover:text-ortho-navy" [class.text-ortho-navy]="isLang('fr')">FR</button>
+        <div class="flex gap-2 text-xs font-semibold text-slate-500">
+          <button type="button" (click)="changeLang('fr')" class="hover:text-ink-900" [class.text-ink-900]="isLang('fr')">FR</button>
           <span>|</span>
-          <button (click)="changeLang('en')" class="hover:text-ortho-navy" [class.text-ortho-navy]="isLang('en')">EN</button>
+          <button type="button" (click)="changeLang('en')" class="hover:text-ink-900" [class.text-ink-900]="isLang('en')">EN</button>
           <span>|</span>
-          <button (click)="changeLang('ar')" class="hover:text-ortho-navy" [class.text-ortho-navy]="isLang('ar')">AR</button>
+          <button type="button" (click)="changeLang('ar')" class="hover:text-ink-900" [class.text-ink-900]="isLang('ar')">AR</button>
         </div>
       </header>
 
@@ -41,17 +46,17 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
           @if (currentStep() === 0) {
             <div class="step-container flex-1 flex flex-col justify-between py-4 text-center">
               <div class="my-auto space-y-4">
-                <h1 class="welcome-hello text-4xl font-extrabold text-ortho-navy dark:text-white tracking-tight">
+                <h1 class="welcome-hello text-4xl font-extrabold text-ink-900 dark:text-white tracking-tight">
                   Hello
                 </h1>
-                <p class="welcome-sub text-lg text-slate-500 dark:text-slate-400 font-medium px-4">
+                <p class="welcome-sub text-lg text-slate-500 dark:text-slate-500 font-medium px-4">
                   Welcome to your OrthoFlow experience.
                 </p>
               </div>
               <button 
                 type="button"
                 (click)="nextStep()"
-                class="w-full py-3.5 bg-ortho-navy text-white font-bold rounded-xl shadow-md hover:bg-ortho-navy/90 hover:shadow-lg transition-all active:scale-[0.98] shrink-0"
+                class="w-full py-3.5 bg-petrol-600 text-white font-bold rounded-xl shadow-md hover:bg-petrol-700 hover:shadow-lg transition-all active:scale-[0.98] shrink-0"
               >
                 Get Started
               </button>
@@ -61,10 +66,10 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
           <!-- STEP 1: Role Selection -->
           @if (currentStep() === 1) {
             <div class="step-container flex-1 flex flex-col justify-between overflow-hidden">
-              <div class="space-y-4 overflow-y-auto pr-1">
+              <div class="space-y-4 overflow-y-auto pe-1">
                 <div>
-                  <h2 class="text-xl font-bold text-ortho-navy dark:text-white tracking-tight">Who are you?</h2>
-                  <p class="text-xs text-slate-400 mt-0.5">Select your primary role to configure your clinical account workspace.</p>
+                  <h2 class="text-xl font-bold text-ink-900 dark:text-white tracking-tight">Who are you?</h2>
+                  <p class="text-xs text-slate-500 mt-0.5">Select your primary role to configure your clinical account workspace.</p>
                 </div>
 
                 <div class="grid grid-cols-1 gap-3 py-2">
@@ -80,16 +85,16 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
                   >
                     <div 
                       [ngClass]="{
-                        'bg-ortho-navy text-white': selectedRole() === 'doctor',
-                        'bg-slate-100 text-slate-400 dark:bg-slate-800': selectedRole() !== 'doctor'
+                        'bg-petrol-600 text-white': selectedRole() === 'doctor',
+                        'bg-slate-100 text-slate-500 dark:bg-slate-800': selectedRole() !== 'doctor'
                       }"
                       class="h-12 w-12 rounded-lg flex items-center justify-center shrink-0 transition-colors"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     </div>
                     <div>
-                      <p class="font-bold text-sm text-slate-900 dark:text-white" [class.text-ortho-navy]="selectedRole() === 'doctor'">Orthodontist / Doctor</p>
-                      <p class="text-xs text-slate-400 mt-0.5">Manage patient files, plan dental treatments, &amp; issue invoices.</p>
+                      <p class="font-bold text-sm text-slate-900 dark:text-white" [class.text-ink-900]="selectedRole() === 'doctor'">Orthodontist / Doctor</p>
+                      <p class="text-xs text-slate-500 mt-0.5">Manage patient files, plan dental treatments, &amp; issue invoices.</p>
                     </div>
                   </button>
 
@@ -105,16 +110,16 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
                   >
                     <div 
                       [ngClass]="{
-                        'bg-ortho-navy text-white': selectedRole() === 'assistant',
-                        'bg-slate-100 text-slate-400 dark:bg-slate-800': selectedRole() !== 'assistant'
+                        'bg-petrol-600 text-white': selectedRole() === 'assistant',
+                        'bg-slate-100 text-slate-500 dark:bg-slate-800': selectedRole() !== 'assistant'
                       }"
                       class="h-12 w-12 rounded-lg flex items-center justify-center shrink-0 transition-colors"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-3-3.87"></path><path d="M9 21v-2a4 4 0 0 0-4-4H3a4 4 0 0 0-4 4v2"></path><circle cx="6" cy="7" r="4"></circle><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     </div>
                     <div>
-                      <p class="font-bold text-sm text-slate-900 dark:text-white" [class.text-ortho-navy]="selectedRole() === 'assistant'">Clinical Assistant</p>
-                      <p class="text-xs text-slate-400 mt-0.5">Manage patient scheduling, administrative paperwork &amp; intake reports.</p>
+                      <p class="font-bold text-sm text-slate-900 dark:text-white" [class.text-ink-900]="selectedRole() === 'assistant'">Clinical Assistant</p>
+                      <p class="text-xs text-slate-500 mt-0.5">Manage patient scheduling, administrative paperwork &amp; intake reports.</p>
                     </div>
                   </button>
                 </div>
@@ -126,7 +131,7 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
                   type="button" 
                   (click)="nextStep()"
                   [disabled]="!selectedRole()"
-                  class="btn-primary px-6 py-3 bg-ortho-navy hover:bg-ortho-navy/90 text-white font-bold rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-[0.98]"
+                  class="btn-primary px-6 py-3 bg-petrol-600 hover:bg-petrol-700 text-white font-bold rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-[0.98]"
                 >
                   Continue
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
@@ -135,13 +140,85 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
             </div>
           }
 
-          <!-- STEP 2: Cabinet Name & Logo Preview -->
+          <!-- STEP 2: Account Creation -->
           @if (currentStep() === 2) {
             <div class="step-container flex-1 flex flex-col justify-between overflow-hidden">
-              <div class="space-y-4 overflow-y-auto pr-1">
+              <div class="space-y-4 overflow-y-auto pe-1">
                 <div>
-                  <h2 class="text-xl font-bold text-ortho-navy dark:text-white tracking-tight">Cabinet Identity</h2>
-                  <p class="text-xs text-slate-400 mt-0.5">Choose your branding, which will appear on patient files and invoices.</p>
+                  <h2 class="text-xl font-bold text-ink-900 dark:text-white tracking-tight">Create Your Account</h2>
+                  <p class="text-xs text-slate-500 mt-0.5">This is how you'll sign in to OrthoFlow going forward.</p>
+                </div>
+
+                @if (accountError()) {
+                  <div class="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 px-3 py-2 text-xs text-red-700 dark:text-red-300 space-y-2" role="alert">
+                    <p>{{ accountError() }}</p>
+                    @if (accountExists()) {
+                      <button
+                        type="button"
+                        (click)="goToLogin()"
+                        class="w-full py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs transition-all active:scale-[0.98]"
+                      >
+                        Go to Login
+                      </button>
+                    }
+                  </div>
+                }
+
+                <div class="space-y-3.5">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                      <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">First Name *</label>
+                      <input type="text" [(ngModel)]="accountFirstName" placeholder="Amine"
+                        class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2.5 text-sm outline-none transition-all focus:border-ortho-sky focus:ring-4 focus:ring-ortho-sky/5 text-slate-900 dark:text-white" />
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Last Name *</label>
+                      <input type="text" [(ngModel)]="accountLastName" placeholder="El Mansouri"
+                        class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2.5 text-sm outline-none transition-all focus:border-ortho-sky focus:ring-4 focus:ring-ortho-sky/5 text-slate-900 dark:text-white" />
+                    </div>
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Email *</label>
+                    <input type="email" [(ngModel)]="accountEmail" placeholder="doctor@orthoflow.com" autocomplete="username"
+                      class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2.5 text-sm outline-none transition-all focus:border-ortho-sky focus:ring-4 focus:ring-ortho-sky/5 text-slate-900 dark:text-white" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                      <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Password *</label>
+                      <input type="password" [(ngModel)]="accountPassword" placeholder="At least 10 characters" autocomplete="new-password"
+                        class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2.5 text-sm outline-none transition-all focus:border-ortho-sky focus:ring-4 focus:ring-ortho-sky/5 text-slate-900 dark:text-white" />
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Confirm Password *</label>
+                      <input type="password" [(ngModel)]="accountPasswordConfirm" placeholder="Re-enter password" autocomplete="new-password"
+                        class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2.5 text-sm outline-none transition-all focus:border-ortho-sky focus:ring-4 focus:ring-ortho-sky/5 text-slate-900 dark:text-white" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nav controls -->
+              <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-between shrink-0">
+                <button type="button" (click)="prevStep()"
+                  class="px-5 py-3 border border-slate-200 dark:border-slate-800 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-900 transition-all active:scale-[0.98]">
+                  Back
+                </button>
+                <button type="button" (click)="validateAccountStep() && nextStep()"
+                  class="btn-primary px-6 py-3 bg-petrol-600 hover:bg-petrol-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all active:scale-[0.98]">
+                  Continue
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- STEP 3: Cabinet Name & Logo Preview -->
+          @if (currentStep() === 3) {
+            <div class="step-container flex-1 flex flex-col justify-between overflow-hidden">
+              <div class="space-y-4 overflow-y-auto pe-1">
+                <div>
+                  <h2 class="text-xl font-bold text-ink-900 dark:text-white tracking-tight">Cabinet Identity</h2>
+                  <p class="text-xs text-slate-500 mt-0.5">Choose your branding, which will appear on patient files and invoices.</p>
                 </div>
 
                 <!-- Input fields container -->
@@ -173,7 +250,7 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                           </button>
                         } @else {
-                          <span class="text-[10px] text-slate-400 font-bold truncate px-1">
+                          <span class="text-[10px] text-slate-500 font-bold truncate px-1">
                             {{ cabinetName() ? cabinetName().charAt(0).toUpperCase() : 'Logo' }}
                           </span>
                         }
@@ -181,7 +258,7 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 
                       <div class="flex-1 text-left space-y-1">
                         <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Upload your logo image</p>
-                        <p class="text-[10px] text-slate-400">PNG, JPG or SVG formats</p>
+                        <p class="text-[10px] text-slate-500">PNG, JPG or SVG formats</p>
                         <div class="pt-0.5">
                           <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-[10px] font-bold transition-all">
                             Browse File
@@ -212,7 +289,7 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
                   type="button" 
                   (click)="nextStep()"
                   [disabled]="!cabinetName().trim()"
-                  class="btn-primary px-6 py-3 bg-ortho-navy hover:bg-ortho-navy/90 text-white font-bold rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-[0.98]"
+                  class="btn-primary px-6 py-3 bg-petrol-600 hover:bg-petrol-700 text-white font-bold rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-[0.98]"
                 >
                   Next
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
@@ -221,16 +298,16 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
             </div>
           }
 
-          <!-- STEP 3: Enterprise Details (ICE, VAT, address, RIB, tel) -->
-          @if (currentStep() === 3) {
+          <!-- STEP 4: Enterprise Details (ICE, VAT, address, RIB, tel) -->
+          @if (currentStep() === 4) {
             <div class="step-container flex-1 flex flex-col justify-between overflow-hidden">
-              <div class="space-y-4 overflow-y-auto pr-1">
+              <div class="space-y-4 overflow-y-auto pe-1">
                 <div>
                   <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-ortho-navy dark:text-white tracking-tight">Enterprise Info</h2>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Optional</span>
+                    <h2 class="text-xl font-bold text-ink-900 dark:text-white tracking-tight">Enterprise Info</h2>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Optional</span>
                   </div>
-                  <p class="text-xs text-slate-400 mt-0.5">These can be changed later at any time in Settings.</p>
+                  <p class="text-xs text-slate-500 mt-0.5">These can be changed later at any time in Settings.</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 py-1">
@@ -311,15 +388,21 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
                 >
                   Back
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   (click)="submitOnboarding()"
-                  class="px-6 py-3 bg-ortho-teal hover:bg-ortho-teal/90 text-white font-bold rounded-xl flex items-center gap-2 transition-all active:scale-[0.98] shimmer"
+                  [disabled]="submitting()"
+                  class="px-6 py-3 bg-ortho-teal hover:bg-ortho-teal/90 text-white font-bold rounded-xl flex items-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
                 >
-                  Complete Setup
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  {{ submitting() ? 'Setting up…' : 'Complete Setup' }}
+                  @if (!submitting()) {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  }
                 </button>
               </div>
+              @if (accountError()) {
+                <p class="text-xs text-red-600 text-center pt-2">{{ accountError() }}</p>
+              }
             </div>
           }
 
@@ -328,10 +411,10 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 
       <!-- Footer indicator dots -->
       <footer class="flex items-center gap-2 py-4 shrink-0 z-10">
-        @for (dot of [0, 1, 2, 3]; track dot) {
+        @for (dot of [0, 1, 2, 3, 4]; track dot) {
           <div 
             [ngClass]="{
-              'bg-ortho-navy w-4': currentStep() === dot,
+              'bg-petrol-600 w-4': currentStep() === dot,
               'bg-slate-300 dark:bg-slate-700 w-1.5': currentStep() !== dot
             }"
             class="h-1.5 rounded-full transition-all duration-300"
@@ -341,22 +424,22 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 
       <!-- Full-screen celebration overlay (Strictly viewport sized) -->
       @if (showCelebration()) {
-        <div class="fixed inset-0 z-50 bg-[#f8fafc]/90 dark:bg-slate-950/90 backdrop-blur-md flex flex-col justify-center items-center text-slate-800 dark:text-slate-100 p-6 animation-fade-in h-screen w-screen overflow-hidden select-none">
+        <div class="fixed inset-0 z-50 bg-[rgb(var(--ink-50))]/90 dark:bg-slate-950/90 backdrop-blur-md flex flex-col justify-center items-center text-slate-800 dark:text-slate-100 p-6 animation-fade-in h-screen w-screen overflow-hidden select-none">
           <div class="text-center p-4 max-w-sm space-y-6 scale-up-bounce flex flex-col items-center">
             <div class="h-16 w-16 rounded-full bg-ortho-teal/10 dark:bg-ortho-teal/20 border border-ortho-teal/20 dark:border-ortho-teal/40 text-3xl flex items-center justify-center float-gentle mb-2 shadow-sm">
               🎉
             </div>
             
             <div class="space-y-2">
-              <h2 class="text-2xl font-extrabold tracking-tight text-ortho-navy dark:text-white">Setup Completed!</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed px-4">
+              <h2 class="text-2xl font-extrabold tracking-tight text-ink-900 dark:text-white">Setup Completed!</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-500 leading-relaxed px-4">
                 Your clinical workspace has been configured successfully. Let's redirect you to the main screen.
               </p>
             </div>
 
             <div class="pt-4 flex flex-col items-center gap-3">
-              <div class="h-6 w-6 animate-spin rounded-full border-2 border-solid border-ortho-navy dark:border-ortho-sky border-r-transparent" role="status"></div>
-              <span class="text-[10px] text-slate-400 dark:text-slate-500 tracking-wider uppercase">Loading Workspace...</span>
+              <div class="h-6 w-6 animate-spin rounded-full border-2 border-solid border-petrol-600 dark:border-ortho-sky border-r-transparent" role="status"></div>
+              <span class="text-[10px] text-slate-500 dark:text-slate-500 tracking-wider uppercase">Loading Workspace...</span>
             </div>
           </div>
         </div>
@@ -417,15 +500,26 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 })
 export class OnboardingComponent {
   private cabinetService = inject(CabinetService);
-  private translateService = inject(TranslateService);
+  private languageService = inject(LanguageService);
+  private toast = inject(ToastService);
   private router = inject(Router);
+  private authApi = inject(AuthApiService);
+  private authService = inject(AuthService);
 
-  // Stepper state (0=Welcome, 1=Role Selection, 2=Cabinet Branding, 3=Enterprise details)
+  // Stepper state (0=Welcome, 1=Role, 2=Account, 3=Cabinet Branding, 4=Enterprise details)
   readonly currentStep = signal<number>(0);
   readonly showCelebration = signal<boolean>(false);
+  readonly submitting = signal<boolean>(false);
+  readonly accountError = signal<string | null>(null);
+  readonly accountExists = signal<boolean>(false);
 
   // Form Fields
   readonly selectedRole = signal<'doctor' | 'assistant' | null>(null);
+  readonly accountFirstName = signal<string>('');
+  readonly accountLastName = signal<string>('');
+  readonly accountEmail = signal<string>('');
+  readonly accountPassword = signal<string>('');
+  readonly accountPasswordConfirm = signal<string>('');
   readonly cabinetName = signal<string>('');
   readonly logoPreview = signal<string>('');
   readonly ice = signal<string>('');
@@ -437,14 +531,12 @@ export class OnboardingComponent {
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.logoPreview.set(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!input.files || !input.files[0]) return;
+
+    readAndValidateLogo(input.files[0])
+      .then(dataUrl => this.logoPreview.set(dataUrl))
+      .catch((err: LogoValidationError) => this.toast.error(err.message))
+      .finally(() => { input.value = ''; });
   }
 
   removeLogo(): void {
@@ -461,7 +553,98 @@ export class OnboardingComponent {
     }
   }
 
+  /**
+   * Validates the account step and, if it passes, clears any previous error
+   * so the Continue button's (click) handler can chain "validate && advance".
+   */
+  validateAccountStep(): boolean {
+    this.accountError.set(null);
+    if (!this.accountFirstName().trim() || !this.accountLastName().trim()) {
+      this.accountError.set('First and last name are required.');
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.accountEmail().trim())) {
+      this.accountError.set('Enter a valid email address.');
+      return false;
+    }
+    if (this.accountPassword().length < 10) {
+      this.accountError.set('Password must be at least 10 characters.');
+      return false;
+    }
+    if (this.accountPassword() !== this.accountPasswordConfirm()) {
+      this.accountError.set('Passwords do not match.');
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Onboarding is the only place a new install can create its first user —
+   * there was previously no registration path anywhere in the app, so a
+   * fresh deployment had a cabinet-setup wizard that saved branding to
+   * localStorage but never created an account capable of logging in.
+   */
   submitOnboarding(): void {
+    if (this.submitting()) return;
+    this.accountError.set(null);
+    this.accountExists.set(false);
+    this.submitting.set(true);
+
+    const role = this.selectedRole() === 'doctor' ? 'DOCTOR' : 'ASSISTANT';
+    const email = this.accountEmail().trim();
+    const password = this.accountPassword();
+
+    this.authApi.register({
+      email,
+      password,
+      firstName: this.accountFirstName().trim(),
+      lastName: this.accountLastName().trim(),
+      role,
+    }).subscribe({
+      next: () => {
+        this.authService.login(email, password).subscribe({
+          next: () => this.finishOnboarding(),
+          error: () => {
+            this.submitting.set(false);
+            this.accountError.set('Account created, but automatic sign-in failed. Please log in manually.');
+            this.router.navigate(['/login']);
+          }
+        });
+      },
+      error: (err) => {
+        this.submitting.set(false);
+        this.accountError.set(this.describeRegisterError(err));
+        this.accountExists.set(err.status === 409 || err.status === 401);
+      }
+    });
+  }
+
+  goToLogin(): void {
+    this.router.navigate(['/login'], { queryParams: { email: this.accountEmail().trim() || null } });
+  }
+
+  /**
+   * status 0 means the request never reached the server (backend down, wrong
+   * port, CORS) — a real 409 conflict always carries a `detail` body, so
+   * conflating the two here previously told users "an account already
+   * exists" when the actual problem was that nothing was listening.
+   */
+  private describeRegisterError(err: { status?: number; error?: { detail?: string } }): string {
+    if (err.status === 0) {
+      return 'Could not reach the server. Make sure the backend is running, then try again.';
+    }
+    if (err.status === 409) {
+      return err.error?.detail || 'A user with this email already exists. Please log in instead.';
+    }
+    if (err.status === 401) {
+      // Bootstrap-only endpoint: once any account exists, unauthenticated
+      // registration is rejected regardless of which email was submitted.
+      return 'An account already exists for this workspace. Please log in instead.';
+    }
+    return err.error?.detail || 'Could not create your account. Please try again.';
+  }
+
+  private finishOnboarding(): void {
     const info: CabinetInfo = {
       name: this.cabinetName().trim(),
       logoUrl: this.logoPreview() || undefined,
@@ -474,22 +657,24 @@ export class OnboardingComponent {
       tel: this.tel().trim() || undefined,
     };
 
-    // Save using the cabinet service
     this.cabinetService.saveCabinetInfo(info);
-
-    // Show celebration and redirect
+    this.submitting.set(false);
     this.showCelebration.set(true);
-    
+
     setTimeout(() => {
       this.router.navigate(['/']);
     }, 2500);
   }
 
   isLang(lang: string): boolean {
-    return this.translateService.currentLang === lang;
+    return this.languageService.currentLang() === lang;
   }
 
   changeLang(lang: string): void {
-    this.translateService.use(lang);
+    // Route through LanguageService (not translateService.use directly) so
+    // choosing Arabic here actually switches document.dir to RTL and
+    // persists the choice — previously it silently reverted on next load
+    // (audit VIII.12 / XI.2).
+    this.languageService.setLanguage(lang);
   }
 }

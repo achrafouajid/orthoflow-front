@@ -1,7 +1,16 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+
+/** Shape of a Spring Data Page<T> response. */
+interface SpringPage<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
 import {
   StockItem,
   StockItemQuery,
@@ -19,6 +28,30 @@ import {
   TreatmentProfitability,
   POStatus,
 } from '../models/stock.model';
+
+/**
+ * Payload for POST/PUT /stock/items. `supplierId` (not a nested `supplier`
+ * object) and `initialStock` (opening quantity, create-only — applied as a
+ * recorded stock movement, never written to `currentStock` directly) match
+ * StockItemRequest on the backend, which intentionally excludes
+ * `currentStock` from the write path (see audit V.6).
+ */
+export interface StockItemRequestPayload {
+  name: string;
+  sku: string;
+  category: string;
+  unit: string;
+  unitSize: number;
+  unitLabel: string;
+  purchasePrice: number;
+  minimumStock: number;
+  svgIcon?: string;
+  active?: boolean;
+  decimalSupported?: boolean;
+  supplierId?: string | null;
+  notes?: string;
+  initialStock?: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class StockService {
@@ -45,11 +78,11 @@ export class StockService {
     return this.http.get<StockItem>(`${this.baseUrl}/items/${id}`);
   }
 
-  createStockItem(item: Partial<StockItem>): Observable<StockItem> {
+  createStockItem(item: StockItemRequestPayload): Observable<StockItem> {
     return this.http.post<StockItem>(`${this.baseUrl}/items`, item);
   }
 
-  updateStockItem(id: string, item: Partial<StockItem>): Observable<StockItem> {
+  updateStockItem(id: string, item: StockItemRequestPayload): Observable<StockItem> {
     return this.http.put<StockItem>(`${this.baseUrl}/items/${id}`, item);
   }
 
@@ -101,16 +134,18 @@ export class StockService {
                                params = params.set('movementType', filter.movementType);
     if (filter?.sortBy)        params = params.set('sortBy',       filter.sortBy);
     if (filter?.sortDir)       params = params.set('sortDir',      filter.sortDir);
-    return this.http.get<StockMovement[]>(`${this.baseUrl}/movements`, { params });
+    params = params.set('size', '200');
+    return this.http.get<SpringPage<StockMovement>>(`${this.baseUrl}/movements`, { params }).pipe(
+      map(page => page.content)
+    );
   }
 
   getItemMovements(itemId: string): Observable<StockMovement[]> {
     return this.http.get<StockMovement[]>(`${this.baseUrl}/items/${itemId}/movements`);
   }
 
-  adjustStock(itemId: string, quantity: number, notes: string, createdBy?: string): Observable<StockMovement> {
-    let params = new HttpParams().set('quantity', quantity.toString()).set('notes', notes);
-    if (createdBy) params = params.set('createdBy', createdBy);
+  adjustStock(itemId: string, quantity: number, notes: string): Observable<StockMovement> {
+    const params = new HttpParams().set('quantity', quantity.toString()).set('notes', notes);
     return this.http.post<StockMovement>(`${this.baseUrl}/items/${itemId}/adjustment`, {}, { params });
   }
 
@@ -186,8 +221,8 @@ export class StockService {
     return this.http.post<DeliveryNote>(`${this.baseUrl}/delivery-notes`, note);
   }
 
-  receiveDeliveryNote(id: string, receivedBy: string, notes?: string): Observable<DeliveryNote> {
-    let params = new HttpParams().set('receivedBy', receivedBy);
+  receiveDeliveryNote(id: string, notes?: string): Observable<DeliveryNote> {
+    let params = new HttpParams();
     if (notes) params = params.set('notes', notes);
     return this.http.post<DeliveryNote>(`${this.baseUrl}/delivery-notes/${id}/receive`, {}, { params });
   }
@@ -237,14 +272,12 @@ export class StockService {
     return this.http.post<SalesOrder>(`${this.baseUrl}/sales-orders`, order);
   }
 
-  confirmSalesOrder(id: string, confirmedBy: string): Observable<SalesOrder> {
-    const params = new HttpParams().set('confirmedBy', confirmedBy);
-    return this.http.post<SalesOrder>(`${this.baseUrl}/sales-orders/${id}/confirm`, {}, { params });
+  confirmSalesOrder(id: string): Observable<SalesOrder> {
+    return this.http.post<SalesOrder>(`${this.baseUrl}/sales-orders/${id}/confirm`, {});
   }
 
-  cancelSalesOrder(id: string, cancelledBy: string): Observable<SalesOrder> {
-    const params = new HttpParams().set('cancelledBy', cancelledBy);
-    return this.http.post<SalesOrder>(`${this.baseUrl}/sales-orders/${id}/cancel`, {}, { params });
+  cancelSalesOrder(id: string): Observable<SalesOrder> {
+    return this.http.post<SalesOrder>(`${this.baseUrl}/sales-orders/${id}/cancel`, {});
   }
 
   deleteSalesOrder(id: string): Observable<void> {
@@ -265,9 +298,8 @@ export class StockService {
     return this.http.get<TreatmentInvoice[]>(`${this.baseUrl}/treatment-invoices/patient/${patientId}`);
   }
 
-  createDraftTreatmentInvoice(patientId: string, treatmentId: string, createdBy?: string): Observable<TreatmentInvoice> {
-    let params = new HttpParams().set('patientId', patientId).set('treatmentId', treatmentId);
-    if (createdBy) params = params.set('createdBy', createdBy);
+  createDraftTreatmentInvoice(patientId: string, treatmentId: string): Observable<TreatmentInvoice> {
+    const params = new HttpParams().set('patientId', patientId).set('treatmentId', treatmentId);
     return this.http.post<TreatmentInvoice>(`${this.baseUrl}/treatment-invoices/draft`, {}, { params });
   }
 
@@ -278,14 +310,12 @@ export class StockService {
     return this.http.post<TreatmentInvoice>(`${this.baseUrl}/treatment-invoices`, invoice);
   }
 
-  finalizeTreatmentInvoice(id: string, finalizedBy: string): Observable<TreatmentInvoice> {
-    const params = new HttpParams().set('finalizedBy', finalizedBy);
-    return this.http.post<TreatmentInvoice>(`${this.baseUrl}/treatment-invoices/${id}/finalize`, {}, { params });
+  finalizeTreatmentInvoice(id: string): Observable<TreatmentInvoice> {
+    return this.http.post<TreatmentInvoice>(`${this.baseUrl}/treatment-invoices/${id}/finalize`, {});
   }
 
-  cancelTreatmentInvoice(id: string, cancelledBy: string): Observable<TreatmentInvoice> {
-    const params = new HttpParams().set('cancelledBy', cancelledBy);
-    return this.http.post<TreatmentInvoice>(`${this.baseUrl}/treatment-invoices/${id}/cancel`, {}, { params });
+  cancelTreatmentInvoice(id: string): Observable<TreatmentInvoice> {
+    return this.http.post<TreatmentInvoice>(`${this.baseUrl}/treatment-invoices/${id}/cancel`, {});
   }
 
   deleteTreatmentInvoice(id: string): Observable<void> {

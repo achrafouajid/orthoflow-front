@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { LanguageService } from '../../core/services/language.service';
 import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service';
+import { PracticeSettingsService } from '../../core/services/practice-settings.service';
+import { ToastService } from '../../core/services/toast.service';
+import { readAndValidateLogo, LogoValidationError } from '../../core/utils/logo-upload';
 
 @Component({
   selector: 'app-settings',
@@ -14,53 +17,113 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight" translate>COMMON.SETTINGS</h1>
-          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Configure your personal workspace and localization options.</p>
+          <p class="text-sm text-slate-500 dark:text-slate-500 mt-1">{{ "SETTINGS.SUBTITLE" | translate }}</p>
         </div>
       </div>
 
       <!-- Tab Navigation -->
       <div class="flex border-b border-slate-200 dark:border-slate-700">
-        <button 
+        <button type="button" 
           (click)="activeTab.set('general')"
           [class]="tabClass(activeTab() === 'general')"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
           <span translate>COMMON.LOCALIZATION</span>
         </button>
-        <button 
+        <button type="button"
           (click)="activeTab.set('enterprise')"
           [class]="tabClass(activeTab() === 'enterprise')"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-          Cabinet &amp; Enterprise
+          {{ "SETTINGS.CABINET_ENTERPRISE_TAB" | translate }}
+        </button>
+        <button type="button"
+          (click)="activeTab.set('scheduling')"
+          [class]="tabClass(activeTab() === 'scheduling')"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          {{ "SETTINGS.SCHEDULING_TAB" | translate }}
         </button>
       </div>
+
+      <!-- Scheduling Tab Content -->
+      @if (activeTab() === 'scheduling') {
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 p-6 space-y-6">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800 dark:text-white">{{ "SETTINGS.WORKING_HOURS_TITLE" | translate }}</h2>
+            <p class="text-xs text-slate-500 mt-0.5">{{ "SETTINGS.WORKING_HOURS_DESC" | translate }}</p>
+          </div>
+
+          <form (ngSubmit)="saveWorkingHours()" class="space-y-4 max-w-sm">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider" for="working-hours-start">{{ "SETTINGS.OPENS_AT" | translate }}</label>
+                <select
+                  id="working-hours-start"
+                  [(ngModel)]="workingHoursStart"
+                  name="workingHoursStart"
+                  class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm outline-none transition-all focus:border-ortho-teal focus:ring-4 focus:ring-ortho-teal/5 text-slate-900 dark:text-white"
+                >
+                  @for (h of startHourOptions; track h) {
+                    <option [ngValue]="h">{{ h }}:00</option>
+                  }
+                </select>
+              </div>
+              <div class="space-y-2">
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider" for="working-hours-end">{{ "SETTINGS.CLOSES_AT" | translate }}</label>
+                <select
+                  id="working-hours-end"
+                  [(ngModel)]="workingHoursEnd"
+                  name="workingHoursEnd"
+                  class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm outline-none transition-all focus:border-ortho-teal focus:ring-4 focus:ring-ortho-teal/5 text-slate-900 dark:text-white"
+                >
+                  @for (h of endHourOptions; track h) {
+                    <option [ngValue]="h">{{ h }}:00</option>
+                  }
+                </select>
+              </div>
+            </div>
+            @if (workingHoursStart >= workingHoursEnd) {
+              <p class="text-xs text-red-600">{{ "SETTINGS.WORKING_HOURS_ORDER_ERROR" | translate }}</p>
+            }
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-700/50 flex justify-end">
+              <button
+                type="submit"
+                [disabled]="workingHoursStart >= workingHoursEnd"
+                class="btn-primary px-6 py-3 font-semibold text-white bg-ortho-teal hover:bg-ortho-teal/90 disabled:opacity-50 disabled:pointer-events-none rounded-xl active:scale-95 duration-200"
+              >
+                {{ "SETTINGS.SAVE_WORKING_HOURS" | translate }}
+              </button>
+            </div>
+          </form>
+        </div>
+      }
 
       <!-- General Tab Content -->
       @if (activeTab() === 'general') {
         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 p-6 space-y-6">
           <div>
             <h2 class="text-xl font-bold text-slate-800 dark:text-white" translate>COMMON.LOCALIZATION</h2>
-            <p class="text-xs text-slate-400 mt-0.5">Adjust the language and regional layout of the interface.</p>
+            <p class="text-xs text-slate-500 mt-0.5">{{ "SETTINGS.LOCALIZATION_DESC" | translate }}</p>
           </div>
           
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3" translate>COMMON.LANGUAGE</label>
               <div class="flex flex-wrap gap-3">
-                <button 
+                <button type="button" 
                   (click)="setLang('fr')"
                   [class]="btnClass(langService.currentLang() === 'fr')"
                 >
                   Français
                 </button>
-                <button 
+                <button type="button" 
                   (click)="setLang('en')"
                   [class]="btnClass(langService.currentLang() === 'en')"
                 >
                   English
                 </button>
-                <button 
+                <button type="button" 
                   (click)="setLang('ar')"
                   [class]="btnClass(langService.currentLang() === 'ar')"
                 >
@@ -77,14 +140,14 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 p-6 space-y-6">
           <div class="flex justify-between items-start">
             <div>
-              <h2 class="text-xl font-bold text-slate-800 dark:text-white">Cabinet Branding &amp; Corporate Identity</h2>
-              <p class="text-xs text-slate-400 mt-0.5">Customize how your clinic is presented. These details automatically pre-fill patient invoices and receipts.</p>
+              <h2 class="text-xl font-bold text-slate-800 dark:text-white">{{ "SETTINGS.CABINET_BRANDING_TITLE" | translate }}</h2>
+              <p class="text-xs text-slate-500 mt-0.5">{{ "SETTINGS.CABINET_BRANDING_DESC" | translate }}</p>
             </div>
             
             @if (showSuccess()) {
               <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 animate-pulse">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                Changes Saved!
+                {{ "SETTINGS.CHANGES_SAVED" | translate }}
               </div>
             }
           </div>
@@ -94,11 +157,11 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-slate-100 dark:border-slate-700/50">
               <!-- Cabinet Logo -->
               <div class="space-y-2">
-                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">Cabinet Logo</label>
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ "SETTINGS.CLINIC_LOGO" | translate }}</label>
                 <div class="flex flex-col items-center p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
                   <div class="relative group h-24 w-24 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shadow-sm mb-3">
                     @if (logoUrl()) {
-                      <img [src]="logoUrl()" alt="Logo Preview" class="h-full w-full object-contain" />
+                      <img [src]="logoUrl()" [attr.alt]="'SETTINGS.LOGO_PREVIEW_ALT' | translate" class="h-full w-full object-contain" />
                       <button 
                         (click)="removeLogo()" 
                         type="button"
@@ -107,12 +170,12 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                       </button>
                     } @else {
-                      <span class="text-xs text-slate-400 font-bold">No Logo</span>
+                      <span class="text-xs text-slate-500 font-bold">{{ "SETTINGS.NO_LOGO" | translate }}</span>
                     }
                   </div>
-                  
+
                   <label class="cursor-pointer px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all">
-                    Browse Logo
+                    {{ "SETTINGS.BROWSE_LOGO" | translate }}
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -125,27 +188,27 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 
               <!-- Cabinet Name -->
               <div class="md:col-span-2 space-y-2">
-                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">Cabinet Name <span class="text-rose-500">*</span></label>
-                <input 
-                  type="text" 
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ "SETTINGS.CLINIC_NAME" | translate }} <span class="text-rose-500">*</span></label>
+                <input
+                  type="text"
                   [(ngModel)]="cabinetName"
                   name="cabinetName"
                   required
-                  placeholder="e.g. Jenkins Ortho Clinic"
-                  class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 outline-none transition-all focus:border-ortho-teal focus:ring-4 focus:ring-ortho-teal/5 text-slate-900 dark:text-white" 
+                  [placeholder]="'SETTINGS.CABINET_NAME_PLACEHOLDER' | translate"
+                  class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 outline-none transition-all focus:border-ortho-teal focus:ring-4 focus:ring-ortho-teal/5 text-slate-900 dark:text-white"
                 />
-                <p class="text-xs text-slate-400">Used as the core title branding in the application header and sidebar menu.</p>
+                <p class="text-xs text-slate-500">{{ "SETTINGS.CABINET_NAME_HINT" | translate }}</p>
               </div>
             </div>
 
             <!-- Part 2: Credentials -->
             <div class="space-y-4">
-              <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Enterprise Invoicing Credentials (Optional)</h3>
-              
+              <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">{{ "SETTINGS.INVOICING_CREDENTIALS_TITLE" | translate }}</h3>
+
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- ICE -->
                 <div class="space-y-2">
-                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">ICE (Morocco Corporate ID)</label>
+                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{{ "SETTINGS.ICE_LABEL" | translate }}</label>
                   <input 
                     type="text" 
                     [(ngModel)]="ice"
@@ -157,7 +220,7 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 
                 <!-- VAT -->
                 <div class="space-y-2">
-                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">VAT / TVA</label>
+                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{{ "SETTINGS.VAT_TVA_LABEL" | translate }}</label>
                   <input 
                     type="text" 
                     [(ngModel)]="vat"
@@ -169,7 +232,7 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 
                 <!-- Patente -->
                 <div class="space-y-2">
-                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Patente (Tax ID)</label>
+                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{{ "SETTINGS.PATENTE_LABEL" | translate }}</label>
                   <input 
                     type="text" 
                     [(ngModel)]="patente"
@@ -181,7 +244,7 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 
                 <!-- Tel -->
                 <div class="space-y-2">
-                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Telephone</label>
+                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{{ "SETTINGS.CLINIC_PHONE" | translate }}</label>
                   <input 
                     type="tel" 
                     [(ngModel)]="tel"
@@ -193,19 +256,19 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 
                 <!-- Address -->
                 <div class="col-span-1 md:col-span-2 space-y-2">
-                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Address</label>
-                  <textarea 
+                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{{ "SETTINGS.CLINIC_ADDRESS" | translate }}</label>
+                  <textarea
                     [(ngModel)]="address"
                     name="address"
                     rows="2"
-                    placeholder="12, Boulevard Anfa, Casablanca, Morocco"
+                    [placeholder]="'SETTINGS.ADDRESS_PLACEHOLDER' | translate"
                     class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm outline-none transition-all focus:border-ortho-teal focus:ring-4 focus:ring-ortho-teal/5 text-slate-900 dark:text-white resize-none" 
                   ></textarea>
                 </div>
 
                 <!-- RIB -->
                 <div class="col-span-1 md:col-span-2 space-y-2">
-                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">RIB (Bank Account Details)</label>
+                  <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{{ "SETTINGS.RIB_LABEL" | translate }}</label>
                   <input 
                     type="text" 
                     [(ngModel)]="rib"
@@ -225,7 +288,7 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
                 class="btn-primary flex items-center gap-2 px-6 py-3 font-semibold text-white bg-ortho-teal hover:bg-ortho-teal/90 disabled:opacity-50 disabled:pointer-events-none rounded-xl active:scale-95 duration-200 shimmer"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                Save Cabinet Details
+                {{ "SETTINGS.SAVE_CABINET_DETAILS" | translate }}
               </button>
             </div>
           </form>
@@ -240,10 +303,19 @@ import { CabinetService, CabinetInfo } from '../../core/services/cabinet.service
 export class SettingsComponent {
   public langService = inject(LanguageService);
   private cabinetService = inject(CabinetService);
+  private practiceSettingsService = inject(PracticeSettingsService);
+  private toast = inject(ToastService);
 
   // Tabs state
-  readonly activeTab = signal<'general' | 'enterprise'>('general');
+  readonly activeTab = signal<'general' | 'enterprise' | 'scheduling'>('general');
   readonly showSuccess = signal<boolean>(false);
+
+  // Working hours (audit VIII.6 / P2 #29). Backend allows start in 0..23 and
+  // end in 1..24 (24 = midnight) — matches PracticeSettingsRequest exactly.
+  startHourOptions = Array.from({ length: 24 }, (_, i) => i); // 0..23
+  endHourOptions = Array.from({ length: 24 }, (_, i) => i + 1); // 1..24
+  workingHoursStart = 8;
+  workingHoursEnd = 19;
 
   // Form bindings
   cabinetName = '';
@@ -270,6 +342,29 @@ export class SettingsComponent {
         this.rib = info.rib || '';
       }
     }, { allowSignalWrites: true });
+
+    effect(() => {
+      const settings = this.practiceSettingsService.settings();
+      this.workingHoursStart = settings.workingHoursStart;
+      this.workingHoursEnd = settings.workingHoursEnd;
+    }, { allowSignalWrites: true });
+
+    this.practiceSettingsService.load().subscribe({
+      error: () => this.toast.error('Could not load working hours.')
+    });
+  }
+
+  saveWorkingHours(): void {
+    if (this.workingHoursStart >= this.workingHoursEnd) {
+      return;
+    }
+    this.practiceSettingsService.update({
+      workingHoursStart: +this.workingHoursStart,
+      workingHoursEnd: +this.workingHoursEnd
+    }).subscribe({
+      next: () => this.toast.success('Working hours updated.'),
+      error: (err) => this.toast.error(err.error?.detail || 'Could not save working hours.')
+    });
   }
 
   setLang(lang: string) {
@@ -280,26 +375,24 @@ export class SettingsComponent {
     const base = "px-6 py-3 font-semibold text-sm border-b-2 -mb-[2px] transition-all duration-200 flex items-center ";
     return isActive 
       ? base + "border-ortho-teal text-ortho-teal"
-      : base + "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white";
+      : base + "border-transparent text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white";
   }
 
   btnClass(isActive: boolean) {
     const base = "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ";
     return isActive 
-      ? base + "bg-ortho-navy text-white border-ortho-navy shadow-md"
+      ? base + "bg-petrol-600 text-white border-petrol-600 shadow-md"
       : base + "bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600";
   }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.logoUrl.set(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!input.files || !input.files[0]) return;
+
+    readAndValidateLogo(input.files[0])
+      .then(dataUrl => this.logoUrl.set(dataUrl))
+      .catch((err: LogoValidationError) => this.toast.error(err.message))
+      .finally(() => { input.value = ''; });
   }
 
   removeLogo(): void {

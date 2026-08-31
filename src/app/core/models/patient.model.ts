@@ -1,80 +1,33 @@
-export interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  gender: 'M' | 'F' | 'O';
-  email: string;
-  phone: string;
-  address: string;
-  cin?: string; // Morocco specific
-  insuranceProvider?: string;
-  insuranceNumber?: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD';
-  createdAt: string;
-  updatedAt: string;
-}
+/**
+ * Patient and scheduling types.
+ *
+ * Wire types are re-exported from `core/api/contract`, which derives them from
+ * the OpenAPI document the backend publishes. They used to be hand-written
+ * here, duplicating the server's shape with nothing comparing the two — see the
+ * header of `core/api/contract.ts` for why that mattered.
+ *
+ * What remains defined in this file is the dental chart, which is genuinely
+ * client-side: `ToothStatus` and the FDI tooth lists describe how the chart is
+ * drawn and are not a projection of any endpoint.
+ *
+ * Four interfaces were removed rather than migrated — `MedicalHistory`,
+ * `TreatmentPlan`, `PatientDocument` and `SimulationMetadata` — along with a
+ * second `ClinicalNote` that shadowed the one in `clinical-record.model.ts`.
+ * None had a backend counterpart and none had a single reference outside this
+ * file; they described endpoints that were planned and never built.
+ */
 
-export interface MedicalHistory {
-  patientId: string;
-  generalHealth: string;
-  allergies: string[];
-  medications: string[];
-  previousOrthoTreatment: boolean;
-  chiefComplaint: string;
-}
+export type {
+  Patient,
+  PatientGender,
+  PatientStatus,
+  PatientSummary,
+  Appointment,
+  AppointmentStatus,
+  Chair,
+} from '../api/contract';
 
-export interface TreatmentPlan {
-  id: string;
-  patientId: string;
-  goals: string[];
-  applianceType: string;
-  extractionPlan?: string;
-  strippingRequired: boolean;
-  estimatedDurationMonths: number;
-  status: 'PROPOSED' | 'APPROVED' | 'ACTIVE' | 'COMPLETED';
-  version: number;
-}
-
-export interface Appointment {
-  id: string;
-  patientId: string;
-  patientName?: string;
-  dateTime: string;
-  type: string;
-  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
-  notes?: string;
-  applianceStep?: number;
-}
-
-export interface ClinicalNote {
-  id: string;
-  patientId: string;
-  authorId: string;
-  content: string;
-  createdAt: string;
-  type: 'PROGRESS' | 'SOAP' | 'URGENT';
-}
-
-export interface PatientDocument {
-  id: string;
-  patientId: string;
-  name: string;
-  type: 'PHOTO' | 'XRAY' | 'STL' | 'CBCT' | 'CONSENT' | 'PRESCRIPTION';
-  url: string;
-  createdAt: string;
-}
-
-export interface SimulationMetadata {
-  id: string;
-  patientId: string;
-  externalLink?: string;
-  snapshotUrl?: string;
-  stepCount: number;
-  lastUpdated: string;
-}
-
-// ── Dental Chart State Models ──────────────────────────────────────────
+// ── Dental chart (client-side) ─────────────────────────────────────────
 
 export type ToothStatus =
   | 'present'       // Normal / healthy tooth

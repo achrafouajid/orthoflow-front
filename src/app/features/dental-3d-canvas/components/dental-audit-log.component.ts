@@ -10,11 +10,11 @@ import { AuditEntry } from '../../../core/services/three-dental-sync.service';
     <div class="audit-container" [class.expanded]="isExpanded()">
       <header class="audit-header" (click)="toggleExpand()">
         <span class="title">
-          <span class="material-icons text-indigo-400">history</span>
+          <span class="material-icons text-ortho-sky">history</span>
           System Dental Canvas Audit Logs
           <span class="badge" *ngIf="auditLog.length > 0">{{ auditLog.length }}</span>
         </span>
-        <button class="expand-btn">
+        <button type="button" class="expand-btn">
           <span class="material-icons">
             {{ isExpanded() ? 'keyboard_arrow_down' : 'keyboard_arrow_up' }}
           </span>
@@ -71,8 +71,8 @@ import { AuditEntry } from '../../../core/services/three-dental-sync.service';
   `,
   styles: [`
     .audit-container {
-      background: #1e293b;
-      border-top: 1px solid #334155;
+      background: rgb(var(--ink-900));
+      border-top: 1px solid rgb(var(--ink-700));
       display: flex;
       flex-direction: column;
       max-height: 50px;
@@ -87,19 +87,19 @@ import { AuditEntry } from '../../../core/services/three-dental-sync.service';
       align-items: center;
       padding: 0.75rem 1.5rem;
       cursor: pointer;
-      background: #0f172a;
+      background: rgb(var(--ink-900));
       user-select: none;
     }
     .audit-header .title {
       font-size: 0.85rem;
       font-weight: 700;
-      color: #94a3b8;
+      color: rgb(var(--ink-500));
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
     .badge {
-      background: #6366f1;
+      background: rgb(var(--petrol-900));
       color: #ffffff;
       font-size: 0.7rem;
       padding: 0.1rem 0.35rem;
@@ -109,7 +109,7 @@ import { AuditEntry } from '../../../core/services/three-dental-sync.service';
     .expand-btn {
       background: transparent;
       border: none;
-      color: #64748b;
+      color: rgb(var(--ink-500));
       cursor: pointer;
       display: flex;
     }
@@ -121,22 +121,22 @@ import { AuditEntry } from '../../../core/services/three-dental-sync.service';
     .table-wrapper {
       border-radius: 8px;
       overflow: hidden;
-      border: 1px solid #334155;
-      background: #0f172a;
+      border: 1px solid rgb(var(--ink-700));
+      background: rgb(var(--ink-900));
     }
     .audit-table {
       width: 100%;
       border-collapse: collapse;
-      text-align: left;
+      text-align: start;
       font-size: 0.75rem;
     }
     .audit-table th, .audit-table td {
       padding: 0.65rem 1rem;
-      border-bottom: 1px solid #1e293b;
+      border-bottom: 1px solid rgb(var(--ink-900));
     }
     .audit-table th {
-      background: #1e293b;
-      color: #94a3b8;
+      background: rgb(var(--ink-900));
+      color: rgb(var(--ink-500));
       font-weight: 700;
       text-transform: uppercase;
       font-size: 0.65rem;
@@ -146,21 +146,21 @@ import { AuditEntry } from '../../../core/services/three-dental-sync.service';
       border-bottom: none;
     }
     .audit-table tr.auto-trigger {
-      background: rgba(99, 102, 241, 0.02);
+      background: rgba(3, 4, 94, 0.02);
     }
     .timestamp {
-      color: #64748b;
+      color: rgb(var(--ink-500));
     }
     .tooth-badge {
-      background: #334155;
-      color: #f8fafc;
+      background: rgb(var(--ink-700));
+      color: rgb(var(--ink-50));
       font-weight: 700;
       padding: 0.15rem 0.35rem;
       border-radius: 4px;
     }
     .view-type {
       font-weight: 600;
-      color: #38bdf8;
+      color: rgb(var(--petrol-400));
     }
     .status-lbl {
       padding: 0.15rem 0.35rem;
@@ -170,32 +170,32 @@ import { AuditEntry } from '../../../core/services/three-dental-sync.service';
     }
     .status-lbl.prev {
       background: rgba(239, 68, 68, 0.1);
-      color: #ef4444;
+      color: rgb(var(--critical-500));
     }
     .status-lbl.new {
       background: rgba(16, 185, 129, 0.1);
-      color: #10b981;
+      color: rgb(var(--positive-500));
     }
     .trigger-badge {
       display: inline-block;
       font-weight: 700;
       font-size: 0.65rem;
-      color: #38bdf8;
+      color: rgb(var(--petrol-400));
       background: rgba(56, 189, 248, 0.1);
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
     }
     .trigger-badge.auto {
-      color: #fbbf24;
+      color: rgb(var(--caution-300));
       background: rgba(251, 191, 36, 0.1);
     }
     .user {
-      color: #e2e8f0;
+      color: rgb(var(--ink-200));
       font-weight: 600;
     }
     .empty-state {
       text-align: center;
-      color: #64748b;
+      color: rgb(var(--ink-500));
       padding: 2rem !important;
       font-style: italic;
     }

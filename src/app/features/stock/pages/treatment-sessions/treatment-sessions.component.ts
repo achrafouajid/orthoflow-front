@@ -17,6 +17,8 @@ import {
 import { Patient } from '../../../../core/models/patient.model';
 
 import { RouterLink } from '@angular/router';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-treatment-sessions',
@@ -28,30 +30,30 @@ import { RouterLink } from '@angular/router';
       <!-- Top Title Bar -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 class="text-3xl font-bold tracking-tight text-ortho-navy">Treatment Sessions & Billing</h1>
-          <p class="text-sm text-ortho-navy/60">Log clinical treatment sessions, adjust pre-mapped consumable usage, and generate stock-deducting invoices.</p>
+          <h1 class="text-3xl font-bold tracking-tight text-ink-900">{{ "TREATMENTS.SESSIONS_BILLING_TITLE" | translate }}</h1>
+          <p class="text-sm text-ink-500">{{ "TREATMENTS.SESSIONS_BILLING_SUBTITLE" | translate }}</p>
         </div>
         <div class="flex items-center gap-3">
-          <button (click)="openLogModal()" class="flex items-center gap-2 px-4 py-2.5 bg-ortho-navy text-white font-medium rounded-xl hover:bg-ortho-navy/90 transition shadow-sm">
+          <button type="button" (click)="openLogModal()" class="flex items-center gap-2 px-4 py-2.5 bg-petrol-600 text-white font-medium rounded-xl hover:bg-petrol-700 transition shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Log Treatment Session
+            {{ "TREATMENTS.LOG_SESSION" | translate }}
           </button>
         </div>
       </div>
 
       <!-- Module Navigation Pills -->
       <div class="flex flex-wrap gap-2 bg-ortho-navy/[0.03] p-1.5 rounded-xl border border-ortho-navy/5 max-w-max font-semibold text-xs">
-        <a routerLink="/stock" class="px-4 py-2 rounded-lg transition text-ortho-navy/60 hover:text-ortho-navy hover:bg-white/50">
-          Stock Catalog
+        <a routerLink="/stock" class="px-4 py-2 rounded-lg transition text-ink-500 hover:text-ink-900 hover:bg-white/50">
+          {{ "STOCK.NAV_CATALOG" | translate }}
         </a>
-        <a routerLink="/stock/procurement" class="px-4 py-2 rounded-lg transition text-ortho-navy/60 hover:text-ortho-navy hover:bg-white/50">
-          Procurement & Receipts (PO/DN)
+        <a routerLink="/stock/procurement" class="px-4 py-2 rounded-lg transition text-ink-500 hover:text-ink-900 hover:bg-white/50">
+          {{ "STOCK.PROCUREMENT" | translate }}
         </a>
-        <a routerLink="/stock/direct-sales" class="px-4 py-2 rounded-lg transition text-ortho-navy/60 hover:text-ortho-navy hover:bg-white/50">
-          Patient OTC Sales (SO)
+        <a routerLink="/stock/direct-sales" class="px-4 py-2 rounded-lg transition text-ink-500 hover:text-ink-900 hover:bg-white/50">
+          {{ "STOCK.NAV_SALES" | translate }}
         </a>
-        <a routerLink="/stock/treatment-sessions" class="px-4 py-2 rounded-lg transition bg-white text-ortho-navy shadow-sm">
-          Treatment Sessions Logger
+        <a routerLink="/stock/treatment-sessions" class="px-4 py-2 rounded-lg transition bg-white text-ink-900 shadow-sm">
+          {{ "STOCK.TREATMENT_SESSIONS" | translate }}
         </a>
       </div>
 
@@ -60,56 +62,56 @@ import { RouterLink } from '@angular/router';
       <div class="bg-white rounded-2xl border border-ortho-navy/5 shadow-sm overflow-hidden">
         
         <div class="p-4 border-b border-ortho-navy/5 bg-ortho-navy/[0.01] flex items-center justify-between">
-          <h3 class="text-base font-bold text-ortho-navy">Treatment Invoices Registry</h3>
-          <span class="text-xs text-ortho-navy/40 font-medium">Record of patient clinical sessions and template materials consumed.</span>
+          <h3 class="text-base font-bold text-ink-900">{{ "TREATMENTS.INVOICES_REGISTRY" | translate }}</h3>
+          <span class="text-xs text-ink-500 font-medium">{{ "TREATMENTS.INVOICES_REGISTRY_SUBTITLE" | translate }}</span>
         </div>
 
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-sm">
             <thead>
-              <tr class="bg-ortho-navy/[0.02] text-ortho-navy/60 font-semibold border-b border-ortho-navy/5">
-                <th class="p-4">Invoice Number</th>
-                <th class="p-4">Patient Name</th>
-                <th class="p-4">Treatment</th>
-                <th class="p-4">Session Date</th>
-                <th class="p-4 text-center">Status</th>
-                <th class="p-4 text-right">Materials Cost</th>
-                <th class="p-4 text-right">Grand Total</th>
-                <th class="p-4 text-right">Actions</th>
+              <tr class="bg-ortho-navy/[0.02] text-ink-500 font-semibold border-b border-ortho-navy/5">
+                <th class="p-4">{{ "TREATMENTS.INVOICE_NUMBER" | translate }}</th>
+                <th class="p-4">{{ "TREATMENTS.PATIENT" | translate }}</th>
+                <th class="p-4">{{ "TREATMENTS.TREATMENT" | translate }}</th>
+                <th class="p-4">{{ "TREATMENTS.SESSION_DATE" | translate }}</th>
+                <th class="p-4 text-center">{{ "COMMON.STATUS" | translate }}</th>
+                <th class="p-4 text-right">{{ "TREATMENTS.MATERIALS_COST" | translate }}</th>
+                <th class="p-4 text-right">{{ "TREATMENTS.GRAND_TOTAL" | translate }}</th>
+                <th class="p-4 text-right">{{ "COMMON.ACTIONS" | translate }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-ortho-navy/5">
               @for (inv of invoices(); track inv.id) {
                 <tr class="hover:bg-ortho-navy/[0.01] transition">
-                  <td class="p-4 font-mono text-xs font-bold text-ortho-navy">{{ inv.invoiceNumber || 'DRAFT' }}</td>
+                  <td class="p-4 font-mono text-xs font-bold text-ink-900">{{ inv.invoiceNumber || 'DRAFT' }}</td>
                   <td class="p-4">
-                    <div class="font-bold text-ortho-navy">{{ inv.patient?.firstName }} {{ inv.patient?.lastName }}</div>
-                    <div class="text-[10px] text-ortho-navy/40">CIN: {{ inv.patient?.cin || 'N/A' }}</div>
+                    <div class="font-bold text-ink-900">{{ inv.patient?.firstName }} {{ inv.patient?.lastName }}</div>
+                    <div class="text-[10px] text-ink-500">CIN: {{ inv.patient?.cin || 'N/A' }}</div>
                   </td>
-                  <td class="p-4 font-semibold text-ortho-navy/80">{{ inv.treatment?.name }}</td>
-                  <td class="p-4 text-ortho-navy/60 font-medium">{{ inv.sessionDate | date:'yyyy-MM-dd HH:mm' }}</td>
+                  <td class="p-4 font-semibold text-ink-700">{{ inv.treatment?.name }}</td>
+                  <td class="p-4 text-ink-500 font-medium">{{ inv.sessionDate | date:'yyyy-MM-dd HH:mm' }}</td>
                   <td class="p-4 text-center">
                     <span class="px-2.5 py-1 text-xs font-bold rounded-full border uppercase" [ngClass]="getInvoiceStatusClasses(inv.status!)">
                       {{ inv.status }}
                     </span>
                   </td>
                   <td class="p-4 text-right font-medium text-emerald-600">{{ inv.consumablesCost | number:'1.2-2' }} DH</td>
-                  <td class="p-4 text-right font-bold text-ortho-navy">{{ inv.total | number:'1.2-2' }} DH</td>
+                  <td class="p-4 text-right font-bold text-ink-900">{{ inv.total | number:'1.2-2' }} DH</td>
                   <td class="p-4 text-right">
                     <div class="flex items-center justify-end gap-2">
                       @if (inv.status === 'DRAFT') {
-                        <button (click)="openDraftEditModal(inv)" class="px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg border border-blue-200 transition">
-                          Edit Draft
+                        <button type="button" (click)="openDraftEditModal(inv)" class="px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg border border-blue-200 transition">
+                          {{ "TREATMENTS.EDIT_DRAFT" | translate }}
                         </button>
-                        <button (click)="finalizeInvoice(inv)" class="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition">
-                          Finalize
+                        <button type="button" (click)="finalizeInvoice(inv)" class="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition">
+                          {{ "TREATMENTS.FINALIZE" | translate }}
                         </button>
                       } @else if (inv.status === 'FINALIZED') {
-                        <button (click)="cancelInvoice(inv)" class="px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-500 hover:bg-red-100 rounded-lg border border-red-200 transition">
-                          Cancel Session
+                        <button type="button" (click)="cancelInvoice(inv)" class="px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 rounded-lg border border-red-200 transition">
+                          {{ "TREATMENTS.CANCEL_SESSION" | translate }}
                         </button>
                       }
-                      <button (click)="deleteInvoice(inv)" class="p-1 hover:bg-red-50 text-red-500/60 hover:text-red-500 rounded-lg transition" [disabled]="inv.status === 'FINALIZED'">
+                      <button type="button" (click)="deleteInvoice(inv)" class="p-1 hover:bg-red-50 text-red-600/60 hover:text-red-600 rounded-lg transition" [disabled]="inv.status === 'FINALIZED'">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                       </button>
                     </div>
@@ -117,7 +119,7 @@ import { RouterLink } from '@angular/router';
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="8" class="p-8 text-center text-ortho-navy/40">No treatment session records found.</td>
+                  <td colspan="8" class="p-8 text-center text-ink-500">{{ "TREATMENTS.NO_SESSIONS" | translate }}</td>
                 </tr>
               }
             </tbody>
@@ -132,10 +134,10 @@ import { RouterLink } from '@angular/router';
             
             <div class="px-6 py-4 border-b border-ortho-navy/5 flex items-center justify-between bg-ortho-navy/[0.01] shrink-0">
               <div>
-                <h3 class="text-lg font-bold text-ortho-navy">{{ editDraftMode() ? 'Edit Clinical Treatment Session' : 'Log Clinical Treatment Session' }}</h3>
-                <p class="text-xs text-ortho-navy/60">Configuring patient materials tracking and billing session.</p>
+                <h3 class="text-lg font-bold text-ink-900">{{ editDraftMode() ? ("TREATMENTS.EDIT_SESSION" | translate) : ("TREATMENTS.LOG_SESSION" | translate) }}</h3>
+                <p class="text-xs text-ink-500">{{ "TREATMENTS.SESSION_MODAL_SUBTITLE" | translate }}</p>
               </div>
-              <button (click)="closeLogModal()" class="p-1 text-ortho-navy/40 hover:text-ortho-navy hover:bg-ortho-navy/5 rounded-lg transition">
+              <button type="button" (click)="closeLogModal()" class="p-1 text-ink-500 hover:text-ink-900 hover:bg-ortho-navy/5 rounded-lg transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
@@ -146,18 +148,18 @@ import { RouterLink } from '@angular/router';
                 <!-- Step 1: Select Patient and Treatment -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label class="block text-xs font-bold text-ortho-navy/60 uppercase tracking-wide mb-1.5">Select Patient *</label>
-                    <select [(ngModel)]="logPatientId" class="w-full px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-ortho-navy transition bg-white font-medium">
-                      <option [value]="null">Select a patient...</option>
+                    <label class="block text-xs font-bold text-ink-500 uppercase tracking-wide mb-1.5">{{ "TREATMENTS.SELECT_PATIENT" | translate }} *</label>
+                    <select [(ngModel)]="logPatientId" class="w-full px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-petrol-600 transition bg-white font-medium">
+                      <option [value]="null">{{ "TREATMENTS.SELECT_PATIENT_PLACEHOLDER" | translate }}</option>
                       @for (p of patients(); track p.id) {
                         <option [value]="p.id">{{ p.lastName }} {{ p.firstName }} (CIN: {{ p.cin || 'N/A' }})</option>
                       }
                     </select>
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-ortho-navy/60 uppercase tracking-wide mb-1.5">Select Treatment Procedure *</label>
-                    <select [(ngModel)]="logTreatmentId" class="w-full px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-ortho-navy transition bg-white font-medium">
-                      <option [value]="null">Select procedure template...</option>
+                    <label class="block text-xs font-bold text-ink-500 uppercase tracking-wide mb-1.5">{{ "TREATMENTS.SELECT_TREATMENT_PROCEDURE" | translate }} *</label>
+                    <select [(ngModel)]="logTreatmentId" class="w-full px-3 py-2 border border-ortho-navy/10 rounded-xl text-sm focus:outline-none focus:border-petrol-600 transition bg-white font-medium">
+                      <option [value]="null">{{ "TREATMENTS.SELECT_TREATMENT_PLACEHOLDER" | translate }}</option>
                       @for (t of treatments(); track t.id) {
                         <option [value]="t.id">{{ t.name }} ({{ t.basePrice }} DH)</option>
                       }
@@ -166,8 +168,8 @@ import { RouterLink } from '@angular/router';
                 </div>
 
                 <div class="flex justify-end pt-2">
-                  <button type="button" (click)="initializeDraft()" [disabled]="!logPatientId || !logTreatmentId" class="px-5 py-2 bg-ortho-navy text-white rounded-xl text-sm font-semibold hover:bg-ortho-navy/90 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                    Load Session Template
+                  <button type="button" (click)="initializeDraft()" [disabled]="!logPatientId || !logTreatmentId" class="px-5 py-2 bg-petrol-600 text-white rounded-xl text-sm font-semibold hover:bg-petrol-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    {{ "TREATMENTS.LOAD_SESSION_TEMPLATE" | translate }}
                   </button>
                 </div>
               } @else {
@@ -180,37 +182,37 @@ import { RouterLink } from '@angular/router';
                     <!-- Consumables Editor Table -->
                     <div class="space-y-3">
                       <div class="flex items-center justify-between border-b border-ortho-navy/5 pb-2">
-                        <span class="text-xs font-bold text-ortho-navy/60 uppercase tracking-wide">Materials Consumed Logger</span>
-                        <button type="button" (click)="addExtraConsumable()" class="px-2.5 py-1 text-xs font-semibold bg-ortho-navy text-white hover:bg-ortho-navy/90 transition rounded-lg">
-                          + Add Extra Material
+                        <span class="text-xs font-bold text-ink-500 uppercase tracking-wide">{{ "TREATMENTS.MATERIALS_CONSUMED_LOGGER" | translate }}</span>
+                        <button type="button" (click)="addExtraConsumable()" class="px-2.5 py-1 text-xs font-semibold bg-petrol-600 text-white hover:bg-petrol-700 transition rounded-lg">
+                          + {{ "TREATMENTS.ADD_EXTRA_MATERIAL" | translate }}
                         </button>
                       </div>
 
                       <div class="space-y-3">
                         @for (c of draftConsumables; track $index; let idx = $index) {
-                          <div class="grid grid-cols-12 gap-3 items-end bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 font-semibold text-xs text-ortho-navy">
+                          <div class="grid grid-cols-12 gap-3 items-end bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 font-semibold text-xs text-ink-900">
                             <div class="col-span-5">
-                              <label class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Material Name</label>
-                              <select [(ngModel)]="c.stockItem" (change)="onConsumableItemChange(idx)" [disabled]="!!c.id" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white focus:outline-none font-semibold text-ortho-navy">
-                                <option [value]="null">Select item...</option>
+                              <label class="block text-[10px] font-bold text-ink-600 uppercase mb-1">{{ "STOCK.ITEM_NAME" | translate }}</label>
+                              <select [(ngModel)]="c.stockItem" (change)="onConsumableItemChange(idx)" [disabled]="!!c.id" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white focus:outline-none font-semibold text-ink-900">
+                                <option [value]="null">{{ "TREATMENTS.SELECT_ITEM_PLACEHOLDER" | translate }}</option>
                                 @for (item of catalogItems(); track item.id) {
                                   <option [ngValue]="item">{{ item.name }} (Available: {{ item.currentStock }} {{ item.unit || 'units' }})</option>
                                 }
                               </select>
                             </div>
                             <div class="col-span-3">
-                              <label class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Qty Used</label>
+                              <label class="block text-[10px] font-bold text-ink-600 uppercase mb-1">{{ "TREATMENTS.QTY_USED" | translate }}</label>
                               <div class="flex items-center gap-1.5">
                                 <input type="number" [(ngModel)]="c.actualQuantity" (change)="recalculateDraftTotals()" min="0.0001" step="any" class="w-full px-2 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white text-center focus:outline-none font-mono font-bold" />
-                                <span class="text-[10px] font-bold text-ortho-navy/50 font-mono select-none shrink-0">{{ c.stockItem?.unit || 'units' }}</span>
+                                <span class="text-[10px] font-bold text-ink-600 font-mono select-none shrink-0">{{ c.stockItem?.unit || 'units' }}</span>
                               </div>
                             </div>
                             <div class="col-span-3 text-right">
-                              <span class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Usage Cost</span>
+                              <span class="block text-[10px] font-bold text-ink-600 uppercase mb-1">{{ "TREATMENTS.USAGE_COST" | translate }}</span>
                               <span class="font-bold text-emerald-600 block py-1.5 text-xs">{{ (c.actualQuantity * c.pricePerUnit) | number:'1.2-2' }} DH</span>
                             </div>
                             <div class="col-span-1 text-center">
-                              <button type="button" (click)="removeDraftConsumable(idx)" class="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition mb-1">
+                              <button type="button" (click)="removeDraftConsumable(idx)" class="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition mb-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                               </button>
                             </div>
@@ -222,39 +224,39 @@ import { RouterLink } from '@angular/router';
                     <!-- Clinical Discounts -->
                     <div class="space-y-3">
                       <div class="flex items-center justify-between border-b border-ortho-navy/5 pb-2">
-                        <span class="text-xs font-bold text-ortho-navy/60 uppercase tracking-wide">Clinical Discounts & Adjustments</span>
-                        <button type="button" (click)="addDiscountLine()" class="px-2.5 py-1 text-xs font-semibold bg-ortho-navy text-white hover:bg-ortho-navy/90 transition rounded-lg">
-                          + Add Discount
+                        <span class="text-xs font-bold text-ink-500 uppercase tracking-wide">{{ "TREATMENTS.DISCOUNTS_ADJUSTMENTS" | translate }}</span>
+                        <button type="button" (click)="addDiscountLine()" class="px-2.5 py-1 text-xs font-semibold bg-petrol-600 text-white hover:bg-petrol-700 transition rounded-lg">
+                          + {{ "TREATMENTS.ADD_DISCOUNT" | translate }}
                         </button>
                       </div>
 
                       <div class="space-y-2">
                         @for (d of draftDiscounts; track $index; let idx = $index) {
-                          <div class="grid grid-cols-12 gap-3 items-end bg-amber-50/20 p-3.5 rounded-2xl border border-amber-100/50 font-semibold text-xs text-ortho-navy">
+                          <div class="grid grid-cols-12 gap-3 items-end bg-amber-50/20 p-3.5 rounded-2xl border border-amber-100/50 font-semibold text-xs text-ink-900">
                             <div class="col-span-3">
-                              <label class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Target</label>
+                              <label class="block text-[10px] font-bold text-ink-600 uppercase mb-1">{{ "TREATMENTS.DISCOUNT_TARGET" | translate }}</label>
                               <select [(ngModel)]="d.target" (change)="recalculateDraftTotals()" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white focus:outline-none">
-                                <option value="INVOICE">Entire Invoice</option>
-                                <option value="TREATMENT">Treatment Fee</option>
+                                <option value="INVOICE">{{ "TREATMENTS.DISCOUNT_TARGET_INVOICE" | translate }}</option>
+                                <option value="TREATMENT">{{ "TREATMENTS.TREATMENT_FEE" | translate }}</option>
                               </select>
                             </div>
                             <div class="col-span-3">
-                              <label class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Type</label>
+                              <label class="block text-[10px] font-bold text-ink-600 uppercase mb-1">{{ "COMMON.TYPE" | translate }}</label>
                               <select [(ngModel)]="d.type" (change)="recalculateDraftTotals()" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white focus:outline-none">
-                                <option value="PERCENTAGE">Percentage (%)</option>
-                                <option value="FIXED">Fixed Amount (DH)</option>
+                                <option value="PERCENTAGE">{{ "TREATMENTS.DISCOUNT_TYPE_PERCENTAGE" | translate }}</option>
+                                <option value="FIXED">{{ "TREATMENTS.DISCOUNT_TYPE_FIXED" | translate }}</option>
                               </select>
                             </div>
                             <div class="col-span-2">
-                              <label class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Value</label>
+                              <label class="block text-[10px] font-bold text-ink-600 uppercase mb-1">{{ "TREATMENTS.DISCOUNT_VALUE" | translate }}</label>
                               <input type="number" [(ngModel)]="d.value" (change)="recalculateDraftTotals()" min="0" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white text-center focus:outline-none font-mono" />
                             </div>
                             <div class="col-span-3">
-                              <label class="block text-[10px] font-bold text-ortho-navy/50 uppercase mb-1">Reason</label>
-                              <input type="text" [(ngModel)]="d.reason" placeholder="e.g. Family plan" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white focus:outline-none" />
+                              <label class="block text-[10px] font-bold text-ink-600 uppercase mb-1">{{ "TREATMENTS.DISCOUNT_REASON" | translate }}</label>
+                              <input type="text" [(ngModel)]="d.reason" [placeholder]="'TREATMENTS.DISCOUNT_REASON_PLACEHOLDER' | translate" class="w-full px-2.5 py-1.5 border border-ortho-navy/10 rounded-lg text-xs bg-white focus:outline-none" />
                             </div>
                             <div class="col-span-1 text-center">
-                              <button type="button" (click)="removeDiscountLine(idx)" class="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition mb-1">
+                              <button type="button" (click)="removeDiscountLine(idx)" class="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition mb-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                               </button>
                             </div>
@@ -267,51 +269,51 @@ import { RouterLink } from '@angular/router';
 
                   <!-- Sidebar Totals / Card Summary -->
                   <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-4 self-start">
-                    <h4 class="text-sm font-bold text-ortho-navy border-b border-ortho-navy/5 pb-2 uppercase tracking-wide">Session Summary</h4>
-                    
-                    <div class="space-y-3 text-xs font-semibold text-ortho-navy/70">
+                    <h4 class="text-sm font-bold text-ink-900 border-b border-ortho-navy/5 pb-2 uppercase tracking-wide">{{ "TREATMENTS.SESSION_SUMMARY" | translate }}</h4>
+
+                    <div class="space-y-3 text-xs font-semibold text-ink-600">
                       <div class="flex justify-between">
-                        <span>Patient:</span>
-                        <span class="font-bold text-ortho-navy">{{ activeDraft()?.patient?.firstName }} {{ activeDraft()?.patient?.lastName }}</span>
+                        <span>{{ "TREATMENTS.PATIENT" | translate }}:</span>
+                        <span class="font-bold text-ink-900">{{ activeDraft()?.patient?.firstName }} {{ activeDraft()?.patient?.lastName }}</span>
                       </div>
                       <div class="flex justify-between">
-                        <span>Procedure:</span>
-                        <span class="font-bold text-ortho-navy">{{ activeDraft()?.treatment?.name }}</span>
+                        <span>{{ "TREATMENTS.TREATMENT" | translate }}:</span>
+                        <span class="font-bold text-ink-900">{{ activeDraft()?.treatment?.name }}</span>
                       </div>
-                      
+
                       <hr class="border-ortho-navy/5">
-                      
+
                       <div class="flex justify-between">
-                        <span>Treatment Fee:</span>
-                        <span class="font-bold text-ortho-navy">{{ activeDraft()?.treatmentPrice | number:'1.2-2' }} DH</span>
+                        <span>{{ "TREATMENTS.TREATMENT_FEE" | translate }}:</span>
+                        <span class="font-bold text-ink-900">{{ activeDraft()?.treatmentPrice | number:'1.2-2' }} DH</span>
                       </div>
                       <div class="flex justify-between">
-                        <span>Consumables Cost:</span>
+                        <span>{{ "TREATMENTS.MATERIALS_COST" | translate }}:</span>
                         <span class="font-bold text-emerald-600">+{{ activeDraft()?.consumablesCost | number:'1.2-2' }} DH</span>
                       </div>
                       <div class="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span class="font-bold text-ortho-navy">{{ activeDraft()?.subtotal | number:'1.2-2' }} DH</span>
+                        <span>{{ "TREATMENTS.SUBTOTAL" | translate }}:</span>
+                        <span class="font-bold text-ink-900">{{ activeDraft()?.subtotal | number:'1.2-2' }} DH</span>
                       </div>
                       <div class="flex justify-between text-emerald-600">
-                        <span>Discount:</span>
+                        <span>{{ "TREATMENTS.DISCOUNT_LABEL" | translate }}:</span>
                         <span>-{{ activeDraft()?.discountAmount | number:'1.2-2' }} DH</span>
                       </div>
 
                       <hr class="border-ortho-navy/5">
 
-                      <div class="flex justify-between items-baseline text-sm font-bold text-ortho-navy pt-2">
-                        <span>Grand Total:</span>
-                        <span class="text-lg font-extrabold text-ortho-navy">{{ activeDraft()?.total | number:'1.2-2' }} DH</span>
+                      <div class="flex justify-between items-baseline text-sm font-bold text-ink-900 pt-2">
+                        <span>{{ "TREATMENTS.GRAND_TOTAL" | translate }}:</span>
+                        <span class="text-lg font-extrabold text-ink-900">{{ activeDraft()?.total | number:'1.2-2' }} DH</span>
                       </div>
                     </div>
 
                     <div class="pt-3 border-t border-ortho-navy/5 space-y-2">
-                      <button (click)="saveDraftSession()" class="w-full py-2 bg-ortho-navy text-white text-xs font-bold rounded-xl hover:bg-ortho-navy/90 transition shadow-sm">
-                        Save Session Draft
+                      <button type="button" (click)="saveDraftSession()" class="w-full py-2 bg-petrol-600 text-white text-xs font-bold rounded-xl hover:bg-petrol-700 transition shadow-sm">
+                        {{ "TREATMENTS.SAVE_SESSION_DRAFT" | translate }}
                       </button>
-                      <button (click)="finalizeSessionFromModal()" class="w-full py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition shadow-sm">
-                        Finalize & Deduct Stock
+                      <button type="button" (click)="finalizeSessionFromModal()" class="w-full py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition shadow-sm">
+                        {{ "TREATMENTS.FINALIZE_DEDUCT_STOCK" | translate }}
                       </button>
                     </div>
 
@@ -340,6 +342,8 @@ import { RouterLink } from '@angular/router';
 export class TreatmentSessionsComponent implements OnInit {
   private stockService = inject(StockService);
   private patientService = inject(PatientApiService);
+  private confirmDialog = inject(ConfirmDialogService);
+  private toast = inject(ToastService);
 
   readonly invoices = signal<TreatmentInvoice[]>([]);
   readonly patients = signal<Patient[]>([]);
@@ -399,7 +403,7 @@ export class TreatmentSessionsComponent implements OnInit {
       return;
     }
 
-    this.stockService.createDraftTreatmentInvoice(this.logPatientId, this.logTreatmentId, '00000000-0000-0000-0000-000000000000').subscribe(draft => {
+    this.stockService.createDraftTreatmentInvoice(this.logPatientId, this.logTreatmentId).subscribe(draft => {
       this.activeDraft.set(draft);
       this.draftConsumables = draft.consumablesUsed ? draft.consumablesUsed.map(c => ({ ...c })) : [];
       this.draftDiscounts = draft.discounts ? draft.discounts.map(d => ({ ...d })) : [];
@@ -511,47 +515,67 @@ export class TreatmentSessionsComponent implements OnInit {
 
     this.stockService.saveTreatmentInvoice(draft).subscribe({
       next: (savedInvoice) => {
-        this.stockService.finalizeTreatmentInvoice(savedInvoice.id!, '00000000-0000-0000-0000-000000000000').subscribe({
+        this.stockService.finalizeTreatmentInvoice(savedInvoice.id!).subscribe({
           next: () => {
             this.loadAllData();
             this.closeLogModal();
           },
           error: (err) => {
-            alert(err.error?.message || err.message || 'Error finalizing treatment session. Check stock levels.');
+            this.toast.error(err.error?.detail || err.error?.message || err.message || 'Error finalizing treatment session. Check stock levels.');
           }
         });
       },
       error: (err) => {
-        alert(err.error?.message || err.message || 'Error saving draft. Check input values.');
+        this.toast.error(err.error?.detail || err.error?.message || err.message || 'Error saving draft. Check input values.');
       }
     });
   }
 
   finalizeInvoice(inv: TreatmentInvoice) {
-    this.stockService.finalizeTreatmentInvoice(inv.id!, '00000000-0000-0000-0000-000000000000').subscribe({
+    this.stockService.finalizeTreatmentInvoice(inv.id!).subscribe({
       next: () => {
         this.loadAllData();
       },
       error: (err) => {
-        alert(err.error?.message || err.message || 'Error finalizing treatment session. Check stock levels.');
+        this.toast.error(err.error?.detail || err.error?.message || err.message || 'Error finalizing treatment session. Check stock levels.');
       }
     });
   }
 
-  cancelInvoice(inv: TreatmentInvoice) {
-    if (confirm("Are you sure you want to cancel this treatment session? Consumed materials will be refunded to stock.")) {
-      this.stockService.cancelTreatmentInvoice(inv.id!, '00000000-0000-0000-0000-000000000000').subscribe(() => {
+  async cancelInvoice(inv: TreatmentInvoice) {
+    const confirmed = await this.confirmDialog.confirm(
+      "Are you sure you want to cancel this treatment session? Consumed materials will be refunded to stock.",
+      { danger: true, confirmLabel: 'Cancel Session' }
+    );
+    if (!confirmed) return;
+
+    this.stockService.cancelTreatmentInvoice(inv.id!).subscribe({
+      next: () => {
+        this.toast.success('Treatment session cancelled and materials refunded.');
         this.loadAllData();
-      });
-    }
+      },
+      error: (err) => {
+        this.toast.error(err.error?.detail || err.error?.message || 'Could not cancel the treatment session.');
+      }
+    });
   }
 
-  deleteInvoice(inv: TreatmentInvoice) {
-    if (confirm("Are you sure you want to delete this draft treatment session?")) {
-      this.stockService.deleteTreatmentInvoice(inv.id!).subscribe(() => {
+  async deleteInvoice(inv: TreatmentInvoice) {
+    const confirmed = await this.confirmDialog.confirm(
+      "Are you sure you want to delete this draft treatment session?",
+      { danger: true, confirmLabel: 'Delete' }
+    );
+    if (!confirmed) return;
+
+    this.stockService.deleteTreatmentInvoice(inv.id!).subscribe({
+      next: () => {
+        this.toast.success('Draft treatment session deleted.');
         this.loadAllData();
-      });
-    }
+      },
+      error: (err) => {
+        this.toast.error(err.error?.detail || err.error?.message || 'Could not delete the draft.');
+      }
+    });
   }
 
   getInvoiceStatusClasses(status: TreatmentInvoiceStatus): string {
@@ -561,7 +585,7 @@ export class TreatmentSessionsComponent implements OnInit {
       case 'FINALIZED':
         return 'bg-emerald-50 text-emerald-600 border-emerald-200';
       case 'CANCELLED':
-        return 'bg-red-50 text-red-500 border-red-200';
+        return 'bg-red-50 text-red-600 border-red-200';
       case 'REFUNDED':
         return 'bg-amber-50 text-amber-500 border-amber-200';
       default:

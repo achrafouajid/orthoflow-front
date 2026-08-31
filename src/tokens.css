@@ -1,0 +1,276 @@
+/* =========================================================================
+   OrthoFlow — Design tokens
+   =========================================================================
+
+   THE ONE SOURCE OF TRUTH for colour, type, space, radius, elevation and
+   motion. `tailwind.config.js` mirrors this file, so `bg-petrol-600` and
+   `rgb(var(--petrol-600))` always resolve to the same value.
+
+   ── Colour model ────────────────────────────────────────────────────────
+   The product separates three jobs and never lets them share a colour.
+   That separation is what makes a clinical screen readable at a glance:
+
+     STRUCTURE  → ink        the chrome: text, tables, borders, surfaces
+     ACTION     → petrol     "you can do this": buttons, links, focus, nav
+     STATUS     → semantic   "this is the state of the world": the 5 below
+
+   Because ACTION owns petrol, a saturated colour anywhere in the content
+   area always means *status* — never decoration. Status colours are the
+   only high-chroma pixels on a data screen, so the eye finds them first.
+
+   ── Status vocabulary (fixed — do not invent new ones) ──────────────────
+     active     petrol    in treatment, in progress, scheduled, in stock
+     done       green     completed, paid, delivered, stable
+     attention  amber     due soon, low stock, pending, awaiting action
+     critical   red       overdue, out of stock, cancelled, contraindication
+     idle       grey      draft, archived, inactive, not applicable
+
+   Colour is never the sole encoding (WCAG 1.4.1): every status pill also
+   carries a label, and every status dot sits next to text.
+
+   ── Contrast ────────────────────────────────────────────────────────────
+   Every foreground/background pair used by the component layer was
+   measured against WCAG 2.1 AA before these values were committed:
+   body and secondary text ≥ 4.5:1, status pills ≥ 6.2:1, status dots,
+   icons and focus rings ≥ 3:1. The `-700` step of each ramp is the text
+   step (on its own `-50` tint); the `-500` step is the dot/icon step.
+   ========================================================================= */
+
+:root {
+  /* ---------------------------------------------------------------------
+     Primitives — space-separated RGB channels so Tailwind's opacity
+     modifiers work (`bg-petrol-600/10`) and raw CSS can use
+     `rgb(var(--petrol-600) / 0.1)`.
+     --------------------------------------------------------------------- */
+
+  /* Petrol — the action ramp. Surgical teal: the one colour with real
+     clinical heritage (drapes and scrubs are teal because it is the
+     complement of blood red). Deepened and desaturated from the original
+     brand teal so it has usable mid-tones, which the old near-black navy
+     did not. */
+  --petrol-50:  240 249 250;
+  --petrol-100: 218 240 242;
+  --petrol-200: 184 225 231;
+  --petrol-300: 136 203 214;
+  --petrol-400:  81 173 189;
+  --petrol-500:  47 143 162;
+  --petrol-600:  35 116 137;
+  --petrol-700:  33  94 111;
+  --petrol-800:  34  78  92;
+  --petrol-900:  32  65  78;
+  --petrol-950:  13  42  51;
+
+  /* Ink — the single neutral ramp. Carries a trace of the petrol hue so
+     chrome reads as part of the brand instead of borrowed from a utility
+     framework. Replaces the two clashing ramps (Tailwind slate + gray)
+     that previously ran side by side. */
+  --ink-50:  246 248 248;
+  --ink-100: 234 238 240;
+  --ink-200: 213 221 224;
+  --ink-300: 179 192 196;
+  --ink-400: 125 142 147;
+  --ink-500:  99 116 122;
+  --ink-600:  79  96 101;
+  --ink-700:  65  81  85;
+  --ink-800:  53  66  68;
+  --ink-900:  30  43  47;
+  --ink-950:  17  26  29;
+
+  /* Status ramps */
+  --positive-50:  236 250 241;
+  --positive-100: 209 243 222;
+  --positive-200: 166 230 193;
+  --positive-300: 110 209 157;
+  --positive-400:  59 181 120;
+  --positive-500:  26 154  92;
+  --positive-600:  18 124  74;
+  --positive-700:  17  99  61;
+  --positive-800:  18  79  51;
+  --positive-900:  16  65  43;
+
+  --caution-50:  255 248 234;
+  --caution-100: 255 238 201;
+  --caution-200: 255 219 146;
+  --caution-300: 252 194  87;
+  --caution-400: 237 162  31;
+  --caution-500: 207 112   8;
+  --caution-600: 173  90   6;
+  --caution-700: 140  71   8;
+  --caution-800: 115  59  13;
+  --caution-900:  96  51  15;
+
+  --critical-50:  254 242 242;
+  --critical-100: 254 226 226;
+  --critical-200: 253 201 201;
+  --critical-300: 250 164 164;
+  --critical-400: 245 112 112;
+  --critical-500: 230  69  69;
+  --critical-600: 208  43  43;
+  --critical-700: 175  32  32;
+  --critical-800: 145  30  30;
+  --critical-900: 121  31  31;
+
+  --white: 255 255 255;
+
+  /* ---------------------------------------------------------------------
+     Semantic aliases — what components actually reference.
+     Never use a primitive directly in a component; use the alias, so the
+     whole product can be re-themed (or given a dark mode) from here.
+     --------------------------------------------------------------------- */
+
+  /* Surfaces */
+  --app-bg:           rgb(var(--ink-50));
+  --surface:          rgb(var(--white));
+  --surface-sunken:   rgb(var(--ink-100));
+  --surface-hover:    rgb(var(--ink-50));
+  --surface-inverse:  rgb(var(--petrol-900));
+
+  /* Borders — `border` for structure, `border-strong` for emphasis and
+     for anything that must clear 3:1 as a non-text indicator. */
+  --border:           rgb(var(--ink-200));
+  --border-subtle:    rgb(var(--ink-100));
+  --border-strong:    rgb(var(--ink-300));
+
+  /* Text */
+  --text:             rgb(var(--ink-900));
+  --text-muted:       rgb(var(--ink-500));   /* AA on surface and app-bg  */
+  /* Secondary text on a TINTED ground (surface-sunken, seg controls,
+     table headers). `--text-muted` is only validated against white and
+     the app background; on ink-100 it lands at 4.17:1 and fails AA, so
+     anything sitting on a tint uses this instead (5.63:1). */
+  --text-muted-on-tint: rgb(var(--ink-600));
+  --text-subtle:      rgb(var(--ink-400));   /* non-text / icons only     */
+  --text-inverse:     rgb(var(--white));
+
+  /* Action */
+  --action:           rgb(var(--petrol-600));
+  --action-hover:     rgb(var(--petrol-700));
+  --action-active:    rgb(var(--petrol-800));
+  --action-text:      rgb(var(--petrol-700));
+  --action-tint:      rgb(var(--petrol-50));
+  --action-tint-hover:rgb(var(--petrol-100));
+  --action-border:    rgb(var(--petrol-200));
+
+  /* Status — each has a solid (dots, bars, charts), a tint (pill ground)
+     and a text step (pill label). */
+  --status-active:        rgb(var(--petrol-500));
+  --status-active-tint:   rgb(var(--petrol-50));
+  --status-active-text:   rgb(var(--petrol-700));
+
+  --status-done:          rgb(var(--positive-500));
+  --status-done-tint:     rgb(var(--positive-50));
+  --status-done-text:     rgb(var(--positive-700));
+
+  --status-attention:     rgb(var(--caution-500));
+  --status-attention-tint:rgb(var(--caution-50));
+  --status-attention-text:rgb(var(--caution-700));
+
+  --status-critical:      rgb(var(--critical-500));
+  --status-critical-tint: rgb(var(--critical-50));
+  --status-critical-text: rgb(var(--critical-700));
+
+  --status-idle:          rgb(var(--ink-400));
+  --status-idle-tint:     rgb(var(--ink-100));
+  --status-idle-text:     rgb(var(--ink-700));
+
+  /* Destructive actions (distinct role from "critical status") */
+  --danger:           rgb(var(--critical-600));
+  --danger-hover:     rgb(var(--critical-700));
+  --danger-tint:      rgb(var(--critical-50));
+
+  /* Focus — one ring, everywhere, 3:1 against every ground it lands on. */
+  --focus-ring:       rgb(var(--petrol-500));
+  --focus-ring-inverse: rgb(var(--petrol-300));
+
+  /* ---------------------------------------------------------------------
+     Typography
+     Manrope stays: its wide apertures hold up at the 13–14px sizes a dense
+     clinical UI runs at, and it reads less generic than the default UI
+     sans. Cormorant Garamond was loaded but never used — dropped.
+     --------------------------------------------------------------------- */
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type scale — 14px UI base. Clinical screens are dense; 16px base
+     pushes tables past the fold and forces users to scroll to compare. */
+  --text-2xs:  0.6875rem; /* 11px — table meta, kbd            */
+  --text-xs:   0.75rem;   /* 12px — labels, captions           */
+  --text-sm:   0.8125rem; /* 13px — table cells, secondary     */
+  --text-base: 0.875rem;  /* 14px — body / default UI          */
+  --text-md:   1rem;      /* 16px — emphasis, reading contexts */
+  --text-lg:   1.125rem;  /* 18px — card titles                */
+  --text-xl:   1.375rem;  /* 22px — section headings           */
+  --text-2xl:  1.75rem;   /* 28px — page titles                */
+  --text-3xl:  2.25rem;   /* 36px — KPI figures                */
+
+  --leading-tight: 1.2;
+  --leading-snug:  1.4;
+  --leading-normal:1.55;
+
+  /* ---------------------------------------------------------------------
+     Space — 4px base. Replaces the ad-hoc rem values scattered per screen.
+     --------------------------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* ---------------------------------------------------------------------
+     Radius — 5 steps, replacing the 10 unrelated values previously in use.
+     Deliberately tighter than the 12–16px that reads as generic dashboard:
+     crisper corners read as instrument, which is what this is.
+     --------------------------------------------------------------------- */
+  --radius-xs:   4px;   /* pills on dense rows, kbd  */
+  --radius-sm:   6px;   /* inputs, small buttons     */
+  --radius-md:   8px;   /* buttons, nav items        */
+  --radius-lg:  12px;   /* cards, panels             */
+  --radius-xl:  16px;   /* modals, sheets            */
+  --radius-full: 999px;
+
+  /* ---------------------------------------------------------------------
+     Elevation — shadows tinted with the ink hue rather than pure black.
+     Black shadows over a tinted background read as grey haze; a tinted
+     shadow reads as depth.
+     --------------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgb(var(--ink-950) / 0.04);
+  --shadow-sm: 0 1px 2px rgb(var(--ink-950) / 0.04),
+               0 2px 6px rgb(var(--ink-950) / 0.05);
+  --shadow-md: 0 2px 4px rgb(var(--ink-950) / 0.04),
+               0 6px 16px rgb(var(--ink-950) / 0.07);
+  --shadow-lg: 0 4px 8px rgb(var(--ink-950) / 0.05),
+               0 16px 32px rgb(var(--ink-950) / 0.10);
+  --shadow-xl: 0 8px 16px rgb(var(--ink-950) / 0.06),
+               0 28px 56px rgb(var(--ink-950) / 0.16);
+
+  /* ---------------------------------------------------------------------
+     Motion
+     Rule for this product: motion is informative, never decorative. It
+     exists to show where something came from, what changed, or that the
+     system is working. Nothing loops forever except an active loading
+     indicator. Durations stay short — a clinician uses this between
+     patients, and animation the user has to wait through is a tax.
+     --------------------------------------------------------------------- */
+  --dur-1: 120ms;  /* hover, colour, focus            */
+  --dur-2: 180ms;  /* small transforms, pills, tabs   */
+  --dur-3: 240ms;  /* entrances, popovers, panels     */
+  --dur-4: 320ms;  /* layout: sidebar, drawer, modal  */
+
+  /* Strong decelerate — motion arrives fast and settles. Reads crisp
+     rather than floaty. */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Slight overshoot — small affordances only (checks, badges, toggles).
+     Never on anything that moves layout. */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  --z-sticky: 20;
+  --z-drawer: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+}

@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import {
   DentalChartState,
   DentalChartType,
@@ -7,21 +7,23 @@ import {
   ADULT_TEETH,
   CHILD_TEETH,
 } from '../models/patient.model';
+import { DentalChartApiService, ToothUpdateSource, DentalChartResponse } from './dental-chart-api.service';
 
 /**
  * DentalChartService
- * 
- * Manages dental chart state per patient.
- * State is serialized as a compact JSON string for storage.
- * 
- * Serialized format (compact):
- *   Base64-encoded JSON of { chartType, teeth: { [id]: status } }
- *   Only non-"present" teeth are stored to keep the string minimal.
+ *
+ * The dental chart is a clinical record, so the server (not the browser) is
+ * the source of truth: every read goes through the backend and every write
+ * is pushed there immediately. localStorage is kept only as a same-tab,
+ * synchronous cache so the UI has something to paint before the network
+ * round-trip resolves — never as the record of truth.
  */
 @Injectable({
   providedIn: 'root',
 })
 export class DentalChartService {
+  private api = inject(DentalChartApiService);
+
   // In-memory store keyed by patientId
   private chartStore = new Map<string, DentalChartState>();
 
@@ -62,30 +64,55 @@ export class DentalChartService {
   }
 
   /**
-   * Load or create a dental chart for a patient.
+   * Load a patient's dental chart. Returns an immediate best-effort chart
+   * (local cache, else a default) so the UI has something to render, and
+   * fetches the server's record in the background — the authoritative
+   * source — updating `currentChart` when it resolves.
    */
   loadChart(patientId: string, dateOfBirth: string): DentalChartState {
-    // Check in-memory store first
+    const chartType = this.getChartTypeForAge(dateOfBirth);
     let chart = this.chartStore.get(patientId);
     if (!chart) {
-      // Try loading from localStorage
       const stored = localStorage.getItem(`dental_chart_${patientId}`);
-      if (stored) {
-        chart = this.deserialize(patientId, stored);
-      } else {
-        const chartType = this.getChartTypeForAge(dateOfBirth);
-        chart = this.createDefaultChart(patientId, chartType);
-      }
+      chart = stored ? this.deserialize(patientId, stored) : this.createDefaultChart(patientId, chartType);
       this.chartStore.set(patientId, chart);
     }
     this.currentChart.set(chart);
+
+    this.api.getChart(patientId, chartType).subscribe({
+      next: (response) => this.applyServerChart(patientId, response),
+      error: (err) => console.error(`Failed to load dental chart for patient ${patientId}`, err),
+    });
+
     return chart;
   }
 
+  private applyServerChart(patientId: string, response: DentalChartResponse): void {
+    const chart = this.createDefaultChart(patientId, response.chartType);
+    for (const tooth of response.teeth) {
+      chart.teeth[tooth.fdi] = { id: tooth.fdi, status: tooth.status, notes: tooth.notes };
+    }
+    chart.lastUpdated = response.updatedAt;
+    this.chartStore.set(patientId, chart);
+    this.currentChart.set({ ...chart });
+    this.saveToLocalStorage(patientId, chart);
+  }
+
   /**
-   * Update a single tooth status.
+   * Update a single tooth status. Applies optimistically so the UI responds
+   * immediately, then pushes the write to the server. If the server write
+   * fails, the local change stays (so the user's action isn't silently
+   * discarded) but the failure is surfaced to the console — a full
+   * offline-queue/retry is future work, this at minimum never pretends an
+   * unsynced write succeeded.
    */
-  updateToothStatus(patientId: string, toothId: string, status: ToothStatus, notes?: string): void {
+  updateToothStatus(
+    patientId: string,
+    toothId: string,
+    status: ToothStatus,
+    notes?: string,
+    source: ToothUpdateSource = '2d'
+  ): void {
     const chart = this.chartStore.get(patientId);
     if (!chart) return;
 
@@ -98,6 +125,37 @@ export class DentalChartService {
     this.chartStore.set(patientId, chart);
     this.currentChart.set({ ...chart });
     this.saveToLocalStorage(patientId, chart);
+
+    this.api.updateTooth(patientId, toothId, status, chart.teeth[toothId].notes, source).subscribe({
+      error: (err) => console.error(`Failed to persist tooth ${toothId} for patient ${patientId}`, err),
+    });
+  }
+
+  /**
+   * Returns all teeth for the currently active chart (used by ThreeDentalSyncService to seed 3D state).
+   * Returns an empty object if no chart is currently loaded.
+   */
+  getAllTeeth(): Record<string, ToothState> {
+    return this.currentChart()?.teeth ?? {};
+  }
+
+  /**
+   * Update a single tooth on the currently active chart without requiring a patientId.
+   * Called by ThreeDentalSyncService to bridge 3D → 2D chart state.
+   * No-op if no chart is currently loaded.
+   */
+  updateTooth(toothId: string, partial: { status?: ToothStatus; notes?: string }, source: ToothUpdateSource = '3d_top'): void {
+    const chart = this.currentChart();
+    if (!chart) return;
+
+    const existing = chart.teeth[toothId] ?? { id: toothId, status: 'present' as ToothStatus };
+    const updatedTooth: ToothState = {
+      ...existing,
+      ...(partial.status !== undefined ? { status: partial.status } : {}),
+      ...(partial.notes !== undefined ? { notes: partial.notes } : {}),
+    };
+
+    this.updateToothStatus(chart.patientId, toothId, updatedTooth.status, updatedTooth.notes, source);
   }
 
   /**
@@ -192,51 +250,14 @@ export class DentalChartService {
   }
 
   /**
-   * Persist to localStorage.
+   * Local cache only — not the source of truth. See loadChart/updateToothStatus.
    */
   private saveToLocalStorage(patientId: string, chart: DentalChartState): void {
-    localStorage.setItem(`dental_chart_${patientId}`, this.serialize(chart));
+    try {
+      localStorage.setItem(`dental_chart_${patientId}`, this.serialize(chart));
+    } catch (err) {
+      console.error(`Failed to cache dental chart for patient ${patientId} locally`, err);
+    }
   }
 
-  /**
-   * Color mapping for tooth statuses (used by the chart component).
-   */
-  static readonly STATUS_COLORS: Record<ToothStatus, string> = {
-    present: 'none',
-    extracted: '#ef4444',
-    composite: '#3b82f6',
-    amalgam: '#6b7280',
-    crown: '#f59e0b',
-    bridge: '#f97316',
-    implant: '#8b5cf6',
-    veneer: '#06b6d4',
-    root_canal: '#ec4899',
-    caries: '#dc2626',
-    fracture: '#991b1b',
-    impacted: '#a855f7',
-    deciduous: '#84cc16',
-    missing: '#d1d5db',
-    post: '#94a3b8',
-  };
-
-  /**
-   * Human-readable labels for statuses.
-   */
-  static readonly STATUS_LABELS: Record<ToothStatus, string> = {
-    present: 'Present',
-    extracted: 'Extracted',
-    composite: 'Composite',
-    amalgam: 'Amalgam',
-    crown: 'Crown',
-    bridge: 'Bridge',
-    implant: 'Implant',
-    veneer: 'Veneer',
-    root_canal: 'Root Canal',
-    caries: 'Caries',
-    fracture: 'Fracture',
-    impacted: 'Impacted',
-    deciduous: 'Deciduous',
-    missing: 'Missing',
-    post: 'Post/Nail',
-  };
 }

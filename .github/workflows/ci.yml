@@ -1,0 +1,45 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (production configuration)
+        run: npx ng build --configuration production
+
+      - name: Unit tests
+        run: npx ng test --watch=false
+
+      - name: Dependency vulnerability scan
+        run: npm audit --audit-level=critical
+        continue-on-error: true
+
+      - name: Build image (no push) to catch Dockerfile regressions
+        run: docker build -t orthoflow-frontend:ci .
+
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

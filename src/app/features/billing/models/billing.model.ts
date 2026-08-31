@@ -1,54 +1,63 @@
-export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
-export type PaymentMethod = 'CASH' | 'CARD' | 'BANK_TRANSFER' | 'INSURANCE' | 'CHEQUE';
-export type ClaimStatus = 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PAID';
-export type QuoteStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+/**
+ * Billing types.
+ *
+ * The wire types are re-exported from `core/api/contract` rather than declared
+ * here. The hand-written versions they replace had drifted from the server in a
+ * way that showed up as a bug rather than a compile error: `Invoice` declared
+ * `patientName`, `treatmentPlanId`, `insuranceScheme`, `notes` and `updatedAt`,
+ * none of which `InvoiceResponse` has ever contained. The invoice list rendered
+ * `patientName` in its patient column (always blank) and searched on it
+ * (never matching). See `core/api/contract.ts` for why the duplication existed.
+ *
+ * `Quote` and `InsuranceClaim` stay hand-written below because they are not
+ * wire types at all — there is no quote or claim endpoint. They are kept, and
+ * labelled, so that the distinction between "contract" and "not built yet"
+ * is visible in the type system rather than discovered at runtime.
+ */
 
-export interface InvoiceLine {
-  id?: string;
-  actCode?: string;
-  label: string;
-  quantity: number;
-  unitPrice: number;
-  discountPct: number;
+export type {
+  Invoice,
+  InvoiceLine,
+  InvoiceStatus,
+  Payment,
+  PaymentMethod,
+  BillingSummary,
+  CreateInvoiceRequest,
+  InvoiceLineRequest,
+  RecordPaymentRequest,
+} from '../../../core/api/contract';
+
+import type { InvoiceLine, InvoiceLineRequest } from '../../../core/api/contract';
+
+// ── Client-side view models ────────────────────────────────────────────
+
+/**
+ * A line being edited in the invoice composer.
+ *
+ * This is deliberately built on `InvoiceLineRequest`, not on the response
+ * type. The two differ: the request carries `discountPct` and `sortOrder`,
+ * the response carries `id` and `lineTotal`. The composer previously typed
+ * its draft lines as the response type, which is how it came to omit
+ * `actCode` — a `@NotBlank` field on the server — and how the omission went
+ * unnoticed. `lineTotal` is added back because the composer shows a running
+ * per-line total; the server recomputes it and ignores whatever is sent.
+ */
+export interface InvoiceDraftLine extends InvoiceLineRequest {
   lineTotal: number;
-  sortOrder: number;
 }
 
-export interface Invoice {
-  id: string;
-  practiceId: string;
-  patientId: string;
-  patientName?: string;
-  treatmentPlanId?: string;
-  invoiceNumber: string;
-  status: InvoiceStatus;
-  issueDate: string;
-  dueDate: string;
-  currency: string;
-  subtotal: number;
-  taxAmount: number;
-  discountAmount: number;
-  total: number;
-  regionCode: string;
-  insuranceScheme?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-  lines: InvoiceLine[];
-  payments?: Payment[];
-}
+// ── Not yet implemented server-side ────────────────────────────────────
+//
+// No endpoint serves either of these. `InvoiceService.quotes` is a signal that
+// is declared, exposed and never populated; `quote-list.component` renders it
+// and therefore always shows an empty list. These declarations describe the
+// intended shape for when the endpoints exist — they are not a contract, and
+// nothing validates them against the backend because there is nothing to
+// validate against. Move them into `core/api/contract.ts` on the day the
+// backend grows `/quotes`, and delete them from here.
 
-export interface Payment {
-  id: string;
-  invoiceId: string;
-  amount: number;
-  method: PaymentMethod;
-  paymentDate: string;
-  reference?: string;
-  notes?: string;
-  recordedBy: string;
-  createdAt: string;
-}
+export type QuoteStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+export type ClaimStatus = 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PAID';
 
 export interface Quote {
   id: string;
@@ -82,14 +91,4 @@ export interface InsuranceClaim {
   paidAmount: number;
   reference?: string;
   notes?: string;
-}
-
-export interface BillingSummary {
-  periodStart: string;
-  periodEnd: string;
-  totalInvoiced: number;
-  totalCollected: number;
-  outstandingAmount: number;
-  invoiceCount: number;
-  byStatus: Record<InvoiceStatus, number>;
 }

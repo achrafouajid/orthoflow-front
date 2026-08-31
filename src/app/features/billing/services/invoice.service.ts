@@ -1,14 +1,18 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Invoice, InvoiceStatus, Payment, Quote, BillingSummary } from '../models/billing.model';
+import { Invoice, InvoiceStatus, Payment, Quote, BillingSummary,
+         CreateInvoiceRequest, RecordPaymentRequest } from '../models/billing.model';
+import type { SpringPage } from '../../../core/api/contract';
 import { Observable, BehaviorSubject, map, tap, finalize, switchMap, shareReplay } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InvoiceService {
   private http = inject(HttpClient);
+  private toast = inject(ToastService);
   private readonly apiUrl = `${environment.apiUrl}/api/v1/invoices`;
 
   // Signals for UI state
@@ -16,12 +20,14 @@ export class InvoiceService {
   private summarySignal = signal<BillingSummary | null>(null);
   private loadingSignal = signal<boolean>(false);
   private quotesSignal = signal<Quote[]>([]);
+  private errorSignal = signal<string | null>(null);
 
   // Computed selectors for components
   invoices = computed(() => this.invoicesSignal());
   summary = computed(() => this.summarySignal());
   loading = computed(() => this.loadingSignal());
   quotes = computed(() => this.quotesSignal());
+  error = computed(() => this.errorSignal());
 
   constructor() {
     this.refreshInvoices();
@@ -32,15 +38,21 @@ export class InvoiceService {
    */
   refreshInvoices(): void {
     this.loadingSignal.set(true);
-    this.http.get<Invoice[]>(this.apiUrl)
+    this.errorSignal.set(null);
+    this.http.get<SpringPage<Invoice>>(this.apiUrl)
       .pipe(
+        map(page => page.content),
         tap(invoices => this.invoicesSignal.set(invoices)),
         switchMap(() => this.getBillingSummary()),
         tap(summary => this.summarySignal.set(summary)),
         finalize(() => this.loadingSignal.set(false))
       )
       .subscribe({
-        error: (err) => console.error('Failed to refresh billing data', err)
+        error: (err) => {
+          console.error('Failed to refresh billing data', err);
+          this.errorSignal.set('Failed to load billing data.');
+          this.toast.error('Could not load billing data. Please try again.');
+        }
       });
   }
 
@@ -48,8 +60,9 @@ export class InvoiceService {
    * Fetches invoices for a specific patient.
    */
   getPatientInvoices(patientId: string): Observable<Invoice[]> {
-    const params = new HttpParams().set('patientId', patientId);
-    return this.http.get<Invoice[]>(this.apiUrl, { params }).pipe(
+    const params = new HttpParams().set('patientId', patientId).set('size', '200');
+    return this.http.get<SpringPage<Invoice>>(this.apiUrl, { params }).pipe(
+      map(page => page.content),
       shareReplay(1)
     );
   }
@@ -64,7 +77,7 @@ export class InvoiceService {
   /**
    * Creates a new invoice and updates the internal state.
    */
-  createInvoice(invoice: Partial<Invoice>): Observable<Invoice> {
+  createInvoice(invoice: CreateInvoiceRequest): Observable<Invoice> {
     this.loadingSignal.set(true);
     return this.http.post<Invoice>(this.apiUrl, invoice).pipe(
       tap(newInvoice => {
@@ -78,7 +91,7 @@ export class InvoiceService {
   /**
    * Records a payment for an invoice.
    */
-  recordPayment(invoiceId: string, payment: Partial<Payment>): Observable<Payment> {
+  recordPayment(invoiceId: string, payment: RecordPaymentRequest): Observable<Payment> {
     this.loadingSignal.set(true);
     return this.http.post<Payment>(`${this.apiUrl}/${invoiceId}/payments`, payment).pipe(
       tap(() => {

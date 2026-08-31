@@ -4,9 +4,10 @@ import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { InvoiceService } from '../../services/invoice.service';
 import { PatientService } from '../../../../core/services/patient.service';
-import { InvoiceLine, Invoice } from '../../models/billing.model';
+import { InvoiceDraftLine, CreateInvoiceRequest } from '../../models/billing.model';
 import { OnInit } from '@angular/core';
 import { finalize } from 'rxjs';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-invoice-create',
@@ -16,8 +17,8 @@ import { finalize } from 'rxjs';
     <div class="create-invoice-container">
       <header class="page-header">
         <div class="header-content">
-          <button class="back-btn" routerLink="..">
-            <span class="material-icons">arrow_back</span>
+          <button type="button" class="back-btn" aria-label="Back" routerLink="..">
+            <span class="material-icons" aria-hidden="true">arrow_back</span>
           </button>
           <h1>Create New Invoice</h1>
         </div>
@@ -41,13 +42,14 @@ import { finalize } from 'rxjs';
           <section class="form-section">
             <div class="section-header">
               <h3>Line Items</h3>
-              <button class="btn-text" (click)="addLine()">
+              <button type="button" class="btn-text" (click)="addLine()">
                 <span class="material-icons">add</span> Add Line
               </button>
             </div>
             
             <div class="line-items-table">
               <div class="table-header">
+                <span class="col-act">Act code</span>
                 <span class="col-desc">Description</span>
                 <span class="col-qty">Qty</span>
                 <span class="col-price">Unit Price</span>
@@ -58,13 +60,14 @@ import { finalize } from 'rxjs';
 
               @for (line of lines(); track $index) {
                 <div class="line-item-row">
+                  <input type="text" [(ngModel)]="line.actCode" placeholder="e.g. ORTHO-01" class="form-control col-act" required>
                   <input type="text" [(ngModel)]="line.label" placeholder="Description..." class="form-control col-desc">
                   <input type="number" [(ngModel)]="line.quantity" (ngModelChange)="calculateTotal()" class="form-control col-qty">
                   <input type="number" [(ngModel)]="line.unitPrice" (ngModelChange)="calculateTotal()" class="form-control col-price">
                   <input type="number" [(ngModel)]="line.discountPct" (ngModelChange)="calculateTotal()" class="form-control col-discount">
                   <span class="col-total">{{ line.lineTotal | number:'1.2-2' }}</span>
-                  <button class="icon-btn-danger col-action" (click)="removeLine($index)">
-                    <span class="material-icons">delete</span>
+                  <button type="button" class="icon-btn-danger col-action" aria-label="Remove line item" (click)="removeLine($index)">
+                    <span class="material-icons" aria-hidden="true">delete</span>
                   </button>
                 </div>
               }
@@ -99,12 +102,9 @@ import { finalize } from 'rxjs';
             </div>
 
             <div class="sidebar-actions">
-              <button class="btn-primary full-width" (click)="saveInvoice('SENT')">
-                <span class="material-icons">send</span>
-                Create & Send
-              </button>
-              <button class="btn-secondary full-width" (click)="saveInvoice('DRAFT')">
-                Save as Draft
+              <button type="button" class="btn-primary full-width" (click)="saveInvoice()">
+                <span class="material-icons">save</span>
+                Create Invoice
               </button>
             </div>
           </div>
@@ -131,18 +131,28 @@ import { finalize } from 'rxjs';
 
     .back-btn {
       background: transparent;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgb(var(--ink-200));
       border-radius: 10px;
       padding: 0.5rem;
+      min-width: 44px;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       display: flex;
-      color: #6b7280;
+      color: rgb(var(--ink-500));
+    }
+
+    .back-btn:focus-visible,
+    .icon-btn-danger:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: 2px;
     }
 
     .header-content h1 {
       font-size: 1.875rem;
       font-weight: 700;
-      color: #111827;
+      color: rgb(var(--ink-900));
       margin: 0;
     }
 
@@ -155,7 +165,7 @@ import { finalize } from 'rxjs';
     .form-section {
       background: white;
       border-radius: 16px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgb(var(--ink-200));
       padding: 1.5rem;
       margin-bottom: 1.5rem;
     }
@@ -164,7 +174,7 @@ import { finalize } from 'rxjs';
       margin: 0 0 1.25rem 0;
       font-size: 1.125rem;
       font-weight: 600;
-      color: #111827;
+      color: rgb(var(--ink-900));
     }
 
     .section-header {
@@ -185,11 +195,11 @@ import { finalize } from 'rxjs';
     label {
       font-size: 0.875rem;
       font-weight: 500;
-      color: #374151;
+      color: rgb(var(--ink-700));
     }
 
     .form-control {
-      border: 1px solid #d1d5db;
+      border: 1px solid rgb(var(--ink-300));
       border-radius: 10px;
       padding: 0.75rem 1rem;
       font-size: 0.95rem;
@@ -198,8 +208,8 @@ import { finalize } from 'rxjs';
     }
 
     .form-control:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      border-color: rgb(var(--petrol-900));
+      box-shadow: 0 0 0 3px rgba(3, 4, 94, 0.1);
     }
 
     .line-items-table {
@@ -210,32 +220,32 @@ import { finalize } from 'rxjs';
 
     .table-header {
       display: grid;
-      grid-template-columns: 1fr 80px 120px 80px 100px 40px;
+      grid-template-columns: 110px 1fr 80px 120px 80px 100px 40px;
       gap: 1rem;
       padding: 0 0.5rem;
       font-size: 0.75rem;
       font-weight: 600;
-      color: #6b7280;
+      color: rgb(var(--ink-500));
       text-transform: uppercase;
     }
 
     .line-item-row {
       display: grid;
-      grid-template-columns: 1fr 80px 120px 80px 100px 40px;
+      grid-template-columns: 110px 1fr 80px 120px 80px 100px 40px;
       gap: 1rem;
       align-items: center;
     }
 
     .col-total {
       font-weight: 600;
-      color: #111827;
+      color: rgb(var(--ink-900));
       text-align: right;
     }
 
     .btn-text {
       background: transparent;
       border: none;
-      color: #4f46e5;
+      color: rgb(var(--petrol-900));
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -246,19 +256,23 @@ import { finalize } from 'rxjs';
     .icon-btn-danger {
       background: transparent;
       border: none;
-      color: #ef4444;
+      color: rgb(var(--critical-500));
       cursor: pointer;
       display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
       padding: 0.5rem;
       border-radius: 8px;
     }
 
-    .icon-btn-danger:hover { background: #fef2f2; }
+    .icon-btn-danger:hover { background: rgb(var(--critical-50)); }
 
     .summary-card {
       background: white;
       border-radius: 16px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgb(var(--ink-200));
       padding: 1.5rem;
       position: sticky;
       top: 2rem;
@@ -268,7 +282,7 @@ import { finalize } from 'rxjs';
       display: flex;
       justify-content: space-between;
       margin-bottom: 0.75rem;
-      color: #4b5563;
+      color: rgb(var(--ink-600));
       font-weight: 500;
     }
 
@@ -276,10 +290,10 @@ import { finalize } from 'rxjs';
       margin-top: 1rem;
       font-size: 1.25rem;
       font-weight: 700;
-      color: #111827;
+      color: rgb(var(--ink-900));
     }
 
-    .discount-text { color: #059669; }
+    .discount-text { color: rgb(var(--positive-600)); }
 
     .sidebar-actions {
       display: flex;
@@ -289,29 +303,6 @@ import { finalize } from 'rxjs';
     }
 
     .full-width { width: 100%; justify-content: center; }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      color: white;
-      border: none;
-      padding: 0.875rem;
-      border-radius: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-    }
-
-    .btn-secondary {
-      background: white;
-      border: 1px solid #e5e7eb;
-      color: #374151;
-      padding: 0.875rem;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
 
     @media (max-width: 992px) {
       .form-grid { grid-template-columns: 1fr; }
@@ -323,12 +314,13 @@ export class InvoiceCreateComponent implements OnInit {
   patientService = inject(PatientService);
   router = inject(Router);
   route = inject(ActivatedRoute);
+  private toast = inject(ToastService);
 
   selectedPatientId = '';
   treatmentPlanId = '';
   notes = '';
-  lines = signal<InvoiceLine[]>([
-    { label: 'Orthodontic Treatment - Monthly Fee', quantity: 1, unitPrice: 1500, discountPct: 0, lineTotal: 1500, sortOrder: 0 }
+  lines = signal<InvoiceDraftLine[]>([
+    { actCode: 'ORTHO-01', label: 'Orthodontic Treatment - Monthly Fee', quantity: 1, unitPrice: 1500, discountPct: 0, lineTotal: 1500, sortOrder: 0 }
   ]);
 
   loading = signal(false);
@@ -347,13 +339,14 @@ export class InvoiceCreateComponent implements OnInit {
   total = signal(0);
 
   addLine() {
-    this.lines.update(l => [...l, { 
-      label: '', 
-      quantity: 1, 
-      unitPrice: 0, 
-      discountPct: 0, 
-      lineTotal: 0, 
-      sortOrder: l.length 
+    this.lines.update(l => [...l, {
+      actCode: '',
+      label: '',
+      quantity: 1,
+      unitPrice: 0,
+      discountPct: 0,
+      lineTotal: 0,
+      sortOrder: l.length
     }]);
   }
 
@@ -383,42 +376,50 @@ export class InvoiceCreateComponent implements OnInit {
     this.total.set(sub - disc);
   }
 
-  saveInvoice(status: any) {
+  saveInvoice() {
     if (!this.selectedPatientId) {
-      alert('Please select a patient');
+      this.toast.error('Please select a patient.');
+      return;
+    }
+    if (!this.lines().length) {
+      this.toast.error('Add at least one line to the invoice.');
+      return;
+    }
+    /* actCode and label are @NotBlank on the server's InvoiceLineRequest.
+       Submitting without them returns a 400 that the user could only read as
+       a generic failure, so catch it here where the offending line is
+       visible. */
+    if (this.lines().some(l => !l.actCode?.trim() || !l.label?.trim())) {
+      this.toast.error('Every line needs an act code and a description.');
       return;
     }
 
-    const patient = this.patientService.patients().find(p => p.id === this.selectedPatientId);
-    
     this.loading.set(true);
-    const invoiceData: Partial<Invoice> = {
-      practiceId: '00000000-0000-0000-0000-000000000001', // Mock practice ID
+    // Only fields the backend's CreateInvoiceRequest actually accepts are
+    // sent — status, issue/due dates, subtotal, tax and totals are computed
+    // server-side, which is authoritative (previously the client computed
+    // and displayed these while the server silently discarded them and
+    // computed different values — audit III.8).
+    const invoiceData: CreateInvoiceRequest = {
+      practiceId: '00000000-0000-0000-0000-000000000001', // Mock practice ID until multi-tenancy exists
       patientId: this.selectedPatientId,
       treatmentPlanId: this.treatmentPlanId || undefined,
-      status: status,
-      issueDate: new Date().toISOString().split('T')[0],
-      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       currency: 'MAD',
-      subtotal: this.subtotal(),
-      taxAmount: 0,
-      discountAmount: this.discountAmount(),
-      total: this.total(),
       regionCode: 'MA',
       notes: this.notes,
       lines: this.lines(),
-      invoiceNumber: `INV-${Date.now().toString().slice(-6)}` // Fallback number generation
     };
 
     this.invoiceService.createInvoice(invoiceData)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => {
+          this.toast.success('Invoice created.');
           this.router.navigate(['/billing/invoices']);
         },
         error: (err) => {
           console.error('Failed to create invoice', err);
-          alert('Failed to create invoice. Check console for details.');
+          this.toast.error(err.error?.detail || 'Failed to create invoice. Please try again.');
         }
       });
   }

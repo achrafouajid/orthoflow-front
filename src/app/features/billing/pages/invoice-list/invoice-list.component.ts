@@ -1,432 +1,284 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { InvoiceService } from '../../services/invoice.service';
-import { InvoiceStatus } from '../../models/billing.model';
+import { Invoice, InvoiceStatus } from '../../models/billing.model';
 import { TranslateModule } from '@ngx-translate/core';
+import { downloadInvoicePdf } from '../../../../core/utils/invoice-pdf';
+import { IconComponent } from '../../../../shared/ui/icon.component';
+import { StatusPillComponent } from '../../../../shared/ui/status-pill.component';
+import { PatientService } from '../../../../core/services/patient.service';
 
+/**
+ * Invoice register.
+ *
+ * The money figures carry the only deliberate colour on the screen:
+ * outstanding turns amber when there is anything to collect, and an
+ * invoice past its due date is surfaced as OVERDUE rather than sitting
+ * quietly as SENT. `status` alone cannot express that — the backend has no
+ * overdue state — so it is derived from `dueDate` at render time, which is
+ * also the reason the derivation lives here next to the display rather
+ * than in the service.
+ */
 @Component({
   selector: 'app-invoice-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule, IconComponent, StatusPillComponent],
   template: `
-    <div class="billing-container">
-      <header class="page-header">
-        <div class="header-content">
-          <h1>{{ 'BILLING.TITLE' | translate }}</h1>
-          <p>{{ 'BILLING.SUBTITLE' | translate }}</p>
+    <div class="anim-rise">
+      <header class="page-head">
+        <div>
+          <h1 class="page-title">{{ 'BILLING.TITLE' | translate }}</h1>
+          <p class="page-sub">{{ 'BILLING.SUBTITLE' | translate }}</p>
         </div>
-        <div class="header-actions">
-          <button class="btn-secondary" routerLink="/billing/quotes">
-            <span class="material-icons">description</span>
+        <div class="page-actions">
+          <a class="btn btn-secondary" routerLink="/billing/quotes">
+            <app-icon name="file-text" [size]="16" />
             {{ 'BILLING.QUOTES' | translate }}
-          </button>
-          <button class="btn-primary" routerLink="create">
-            <span class="material-icons">add</span>
+          </a>
+          <a class="btn btn-primary" routerLink="create">
+            <app-icon name="plus" [size]="16" />
             {{ 'BILLING.NEW_INVOICE' | translate }}
-          </button>
+          </a>
         </div>
       </header>
 
-      <div class="stats-grid">
-        @if (invoiceService.summary(); as summary) {
-          <div class="stat-card">
-            <div class="stat-icon invoiced">
-              <span class="material-icons">receipt</span>
-            </div>
-            <div class="stat-info">
-              <span class="stat-label">{{ 'BILLING.TOTAL_INVOICED' | translate }}</span>
-              <span class="stat-value">{{ summary.totalInvoiced | number:'1.2-2' }} MAD</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon collected">
-              <span class="material-icons">payments</span>
-            </div>
-            <div class="stat-info">
-              <span class="stat-label">{{ 'BILLING.TOTAL_COLLECTED' | translate }}</span>
-              <span class="stat-value">{{ summary.totalCollected | number:'1.2-2' }} MAD</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon outstanding">
-              <span class="material-icons">pending_actions</span>
-            </div>
-            <div class="stat-info">
-              <span class="stat-label">{{ 'BILLING.OUTSTANDING' | translate }}</span>
-              <span class="stat-value">{{ summary.outstandingAmount | number:'1.2-2' }} MAD</span>
-            </div>
-          </div>
-        }
-      </div>
+      <!-- Money summary -->
+      @if (invoiceService.summary(); as summary) {
+        <section class="stagger mb-4 grid gap-4 sm:grid-cols-3">
+          <article class="card flex items-center gap-3 p-4">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-petrol-50 text-petrol-600">
+              <app-icon name="receipt" [size]="17" />
+            </span>
+            <span class="flex min-w-0 flex-col leading-tight">
+              <span class="text-xs font-bold uppercase tracking-wider text-ink-500">{{ 'BILLING.TOTAL_INVOICED' | translate }}</span>
+              <span class="truncate text-xl font-extrabold tabular-nums text-ink-900">{{ money(summary.totalInvoiced) }}</span>
+            </span>
+          </article>
 
-      <div class="filters-bar">
-        <div class="search-input">
-          <span class="material-icons">search</span>
-          <input type="text" [placeholder]="'COMMON.SEARCH' | translate" />
-        </div>
-        <div class="filters-actions">
-          <select class="filter-select">
+          <article class="card flex items-center gap-3 p-4">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-positive-50 text-positive-600">
+              <app-icon name="check-circle" [size]="17" />
+            </span>
+            <span class="flex min-w-0 flex-col leading-tight">
+              <span class="text-xs font-bold uppercase tracking-wider text-ink-500">{{ 'BILLING.TOTAL_COLLECTED' | translate }}</span>
+              <span class="truncate text-xl font-extrabold tabular-nums text-ink-900">{{ money(summary.totalCollected) }}</span>
+            </span>
+          </article>
+
+          <article class="card flex items-center gap-3 p-4">
+            <span
+              class="grid h-9 w-9 shrink-0 place-items-center rounded-md"
+              [class]="summary.outstandingAmount > 0 ? 'bg-caution-50 text-caution-700' : 'bg-ink-100 text-ink-500'"
+            >
+              <app-icon name="clock" [size]="17" />
+            </span>
+            <span class="flex min-w-0 flex-col leading-tight">
+              <span class="text-xs font-bold uppercase tracking-wider text-ink-500">{{ 'BILLING.OUTSTANDING' | translate }}</span>
+              <span
+                class="truncate text-xl font-extrabold tabular-nums"
+                [class]="summary.outstandingAmount > 0 ? 'text-caution-700' : 'text-ink-900'"
+              >{{ money(summary.outstandingAmount) }}</span>
+            </span>
+          </article>
+        </section>
+      }
+
+      <!-- Filters -->
+      <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label class="search">
+          <span class="sr-only">{{ 'COMMON.SEARCH' | translate }}</span>
+          <app-icon name="search" [size]="16" />
+          <input
+            class="input"
+            type="search"
+            [placeholder]="'BILLING.SEARCH_PLACEHOLDER' | translate"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event)"
+          />
+        </label>
+
+        <label class="sm:w-56">
+          <span class="sr-only">{{ 'BILLING.ALL_STATUSES' | translate }}</span>
+          <select class="select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
             <option value="">{{ 'BILLING.ALL_STATUSES' | translate }}</option>
-            <option value="DRAFT">{{ 'BILLING.STATUS.DRAFT' | translate }}</option>
-            <option value="SENT">{{ 'BILLING.STATUS.SENT' | translate }}</option>
-            <option value="PARTIALLY_PAID">{{ 'BILLING.STATUS.PARTIALLY_PAID' | translate }}</option>
-            <option value="PAID">{{ 'BILLING.STATUS.PAID' | translate }}</option>
+            @for (s of statuses; track s) {
+              <option [value]="s">{{ 'STATUS.' + s | translate }}</option>
+            }
           </select>
-          <button class="btn-filter">
-            <span class="material-icons">filter_list</span>
-            {{ 'COMMON.FILTER' | translate }}
-          </button>
-        </div>
+        </label>
       </div>
 
-      <div class="table-card">
-        <table class="billing-table">
-          <thead>
-            <tr>
-              <th>{{ 'BILLING.INVOICE_NUMBER' | translate }}</th>
-              <th>{{ 'PATIENTS.NAME' | translate }}</th>
-              <th>{{ 'COMMON.STATUS' | translate }}</th>
-              <th>{{ 'COMMON.DATE' | translate }}</th>
-              <th>{{ 'COMMON.AMOUNT' | translate }}</th>
-              <th>{{ 'COMMON.ACTIONS' | translate }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (invoice of invoiceService.invoices(); track invoice.id) {
-              <tr class="clickable-row" [routerLink]="[invoice.id]">
-                <td>
-                  <span class="invoice-number">{{ invoice.invoiceNumber }}</span>
-                </td>
-                <td>
-                  <div class="patient-info">
-                    <span class="patient-name">{{ invoice.patientName }}</span>
-                    <span class="region-tag">{{ invoice.regionCode }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="status-badge" [class]="invoice.status.toLowerCase().replace('_', '-')">
-                    {{ 'BILLING.STATUS.' + invoice.status | translate }}
-                  </span>
-                </td>
-                <td>
-                  <div class="date-info">
-                    <span class="issue-date">{{ invoice.issueDate | date:'mediumDate' }}</span>
-                    <span class="due-date">{{ 'BILLING.DUE' | translate }}: {{ invoice.dueDate | date:'mediumDate' }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="amount-value">{{ invoice.total | number:'1.2-2' }} {{ invoice.currency }}</span>
-                </td>
-                <td>
-                  <div class="row-actions">
-                    <button class="icon-btn" [title]="'BILLING.DOWNLOAD_PDF' | translate" (click)="$event.stopPropagation()">
-                      <span class="material-icons">download</span>
-                    </button>
-                    <button class="icon-btn" [title]="'BILLING.SEND_EMAIL' | translate" (click)="$event.stopPropagation()">
-                      <span class="material-icons">alternate_email</span>
-                    </button>
-                    <button class="icon-btn" [title]="'COMMON.MORE' | translate" (click)="$event.stopPropagation()">
-                      <span class="material-icons">more_vert</span>
-                    </button>
-                  </div>
-                </td>
+      <!-- Table -->
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'BILLING.INVOICE_NUMBER' | translate }}</th>
+                <th scope="col">{{ 'PATIENTS.NAME' | translate }}</th>
+                <th scope="col">{{ 'COMMON.STATUS' | translate }}</th>
+                <th scope="col">{{ 'COMMON.DATE' | translate }}</th>
+                <th scope="col" class="cell-num">{{ 'COMMON.AMOUNT' | translate }}</th>
+                <th scope="col" class="cell-actions"><span class="sr-only">{{ 'COMMON.ACTIONS' | translate }}</span></th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (row of visible(); track row.invoice.id) {
+                <!-- Row click is a mouse convenience; the invoice number is
+                     the keyboard-reachable link (a routerLink on <tr> is
+                     not focusable, so it was mouse-only). -->
+                <tr class="row-clickable" (click)="open(row.invoice.id)">
+                  <td>
+                    <a
+                      class="mono font-semibold text-ink-900 no-underline hover:text-petrol-700"
+                      [routerLink]="[row.invoice.id]"
+                      (click)="$event.stopPropagation()"
+                    >{{ row.invoice.invoiceNumber }}</a>
+                  </td>
+                  <td>
+                    <span class="flex min-w-0 flex-col leading-tight">
+                      <span class="truncate font-semibold text-ink-900">{{ row.patientName || '—' }}</span>
+                      @if (row.invoice.regionCode) {
+                        <span class="text-2xs text-ink-500">{{ row.invoice.regionCode }}</span>
+                      }
+                    </span>
+                  </td>
+                  <td><app-status-pill [status]="row.displayStatus" /></td>
+                  <td>
+                    <span class="flex flex-col leading-tight">
+                      <span class="text-ink-900">{{ row.invoice.issueDate | date: 'mediumDate' }}</span>
+                      <span
+                        class="text-2xs"
+                        [class]="row.isOverdue ? 'font-bold text-critical-700' : 'text-ink-500'"
+                      >
+                        {{ 'BILLING.DUE' | translate }}: {{ row.invoice.dueDate | date: 'mediumDate' }}
+                      </span>
+                    </span>
+                  </td>
+                  <td class="cell-num">
+                    <span class="flex flex-col leading-tight">
+                      <span class="font-bold text-ink-900">{{ money(row.invoice.total, row.invoice.currency) }}</span>
+                      @if (row.balance > 0) {
+                        <span class="text-2xs font-semibold text-caution-700">
+                          {{ 'BILLING.BALANCE' | translate }} {{ money(row.balance, row.invoice.currency) }}
+                        </span>
+                      }
+                    </span>
+                  </td>
+                  <td class="cell-actions">
+                    <div class="flex justify-end gap-1">
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-icon"
+                        [title]="'BILLING.DOWNLOAD_PDF' | translate"
+                        [attr.aria-label]="('BILLING.DOWNLOAD_PDF' | translate) + ' — ' + row.invoice.invoiceNumber"
+                        (click)="$event.stopPropagation(); downloadPdf(row.invoice)"
+                      >
+                        <app-icon name="download" [size]="16" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="!p-0">
+                    <div class="empty">
+                      <span class="empty-icon"><app-icon name="receipt" [size]="20" /></span>
+                      @if (invoiceService.invoices().length) {
+                        <p class="empty-title">{{ 'BILLING.NO_MATCHES' | translate }}</p>
+                        <p class="empty-text">{{ 'BILLING.NO_MATCHES_HINT' | translate }}</p>
+                        <button type="button" class="btn btn-secondary btn-sm" (click)="clearFilters()">
+                          {{ 'COMMON.CLEAR_FILTERS' | translate }}
+                        </button>
+                      } @else {
+                        <p class="empty-title">{{ 'BILLING.EMPTY_TITLE' | translate }}</p>
+                        <p class="empty-text">{{ 'BILLING.EMPTY_TEXT' | translate }}</p>
+                        <a class="btn btn-primary btn-sm" routerLink="create">
+                          <app-icon name="plus" [size]="15" />
+                          {{ 'BILLING.NEW_INVOICE' | translate }}
+                        </a>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `,
-  styles: [`
-    .billing-container {
-      padding: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-    }
-
-    .header-content h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #111827;
-      margin: 0;
-    }
-
-    .header-content p {
-      color: #6b7280;
-      margin: 0.5rem 0 0 0;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      color: white;
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
-      transition: all 0.2s ease;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
-    }
-
-    .btn-secondary {
-      background: white;
-      border: 1px solid #e5e7eb;
-      color: #374151;
-      padding: 0.75rem 1.5rem;
-      border-radius: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn-secondary:hover {
-      background: #f9fafb;
-      border-color: #d1d5db;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-
-    .stat-card {
-      background: white;
-      padding: 1.5rem;
-      border-radius: 16px;
-      border: 1px solid #e5e7eb;
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-
-    .stat-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .stat-icon.invoiced { background: #eff6ff; color: #2563eb; }
-    .stat-icon.collected { background: #ecfdf5; color: #059669; }
-    .stat-icon.outstanding { background: #fff7ed; color: #d97706; }
-
-    .stat-info {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .stat-label {
-      font-size: 0.875rem;
-      color: #6b7280;
-      font-weight: 500;
-    }
-
-    .stat-value {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #111827;
-    }
-
-    .filters-bar {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .search-input {
-      flex: 1;
-      position: relative;
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      padding: 0 1rem;
-    }
-
-    .search-input input {
-      border: none;
-      padding: 0.75rem 0.5rem;
-      width: 100%;
-      outline: none;
-    }
-
-    .search-input .material-icons { color: #9ca3af; }
-
-    .filters-actions {
-      display: flex;
-      gap: 0.75rem;
-    }
-
-    .filter-select {
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 0 1rem;
-      background: white;
-      color: #374151;
-      font-weight: 500;
-      outline: none;
-    }
-
-    .btn-filter {
-      background: white;
-      border: 1px solid #e5e7eb;
-      color: #374151;
-      padding: 0.75rem 1rem;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    .table-card {
-      background: white;
-      border-radius: 16px;
-      border: 1px solid #e5e7eb;
-      overflow: hidden;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    .billing-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-
-    .billing-table th {
-      background: #f9fafb;
-      padding: 1rem 1.5rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .billing-table td {
-      padding: 1.25rem 1.5rem;
-      border-top: 1px solid #f3f4f6;
-    }
-
-    .clickable-row {
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .clickable-row:hover { background: #f8fafc; }
-
-    .invoice-number {
-      font-weight: 600;
-      color: #4f46e5;
-    }
-
-    .patient-info {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .patient-name {
-      font-weight: 500;
-      color: #111827;
-    }
-
-    .region-tag {
-      font-size: 0.7rem;
-      background: #f3f4f6;
-      color: #6b7280;
-      padding: 0.1rem 0.4rem;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .status-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
-    .status-badge.draft { background: #f3f4f6; color: #374151; }
-    .status-badge.sent { background: #e0e7ff; color: #4338ca; }
-    .status-badge.partially-paid { background: #fef3c7; color: #92400e; }
-    .status-badge.paid { background: #dcfce7; color: #166534; }
-    .status-badge.cancelled { background: #fee2e2; color: #991b1b; }
-
-    .date-info {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .issue-date { font-size: 0.9rem; color: #111827; }
-    .due-date { font-size: 0.75rem; color: #6b7280; }
-
-    .amount-value {
-      font-weight: 700;
-      color: #111827;
-    }
-
-    .row-actions {
-      display: flex;
-      gap: 0.25rem;
-    }
-
-    .icon-btn {
-      background: transparent;
-      border: none;
-      color: #9ca3af;
-      padding: 0.5rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .icon-btn:hover {
-      background: #f3f4f6;
-      color: #4f46e5;
-    }
-
-    @media (max-width: 768px) {
-      .stats-grid { grid-template-columns: 1fr; }
-      .filters-bar { flex-direction: column; }
-      .billing-table thead { display: none; }
-      .billing-table tr { display: block; border-bottom: 1px solid #f3f4f6; padding: 1rem; }
-      .billing-table td { display: flex; justify-content: space-between; padding: 0.5rem 0; border: none; }
-      .billing-table td::before { content: attr(data-label); font-weight: 600; color: #6b7280; }
-    }
-  `]
 })
 export class InvoiceListComponent {
-  invoiceService = inject(InvoiceService);
+  readonly invoiceService = inject(InvoiceService);
+  private readonly router = inject(Router);
+  private readonly patients = inject(PatientService);
+
+  readonly query = signal('');
+  readonly statusFilter = signal<'' | InvoiceStatus>('');
+
+  readonly statuses: InvoiceStatus[] = ['DRAFT', 'SENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'];
+
+  readonly visible = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    const status = this.statusFilter();
+    const todayStart = new Date().setHours(0, 0, 0, 0);
+
+    return this.invoiceService
+      .invoices()
+      .filter((inv) => {
+        if (status && inv.status !== status) return false;
+        if (!q) return true;
+        return [inv.invoiceNumber, this.patients.nameFor(inv.patientId), inv.regionCode]
+          .some((v) => (v ?? '').toString().toLowerCase().includes(q));
+      })
+      .map((invoice) => {
+        /* InvoiceResponse carries only patientId, so the display name is a
+           join against the loaded patient list rather than a field. */
+        const patientName = this.patients.nameFor(invoice.patientId);
+        /* A cancelled or draft invoice is not collectable, so it has no
+           balance to chase — showing one made a cancelled invoice look
+           like unpaid debt in the amber "still owed" treatment. */
+        const collectable = invoice.status !== 'CANCELLED' && invoice.status !== 'DRAFT';
+        const balance = collectable
+          ? Math.max(0, (invoice.total ?? 0) - (invoice.amountPaid ?? 0))
+          : 0;
+
+        /* Overdue is a display concern: money is still owed and the due
+           date has passed. The backend has no OVERDUE state. */
+        const isOverdue =
+          balance > 0 && !!invoice.dueDate && new Date(invoice.dueDate).getTime() < todayStart;
+
+        return { invoice, patientName, balance, isOverdue, displayStatus: isOverdue ? 'OVERDUE' : invoice.status };
+      });
+  });
+
+  /** Formatted in the invoice's own currency, falling back to MAD. */
+  money(value: number | undefined, currency = 'MAD'): string {
+    const amount = value ?? 0;
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: currency || 'MAD',
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${amount.toFixed(2)} ${currency}`;
+    }
+  }
+
+  open(id: string): void {
+    this.router.navigate(['/billing/invoices', id]);
+  }
+
+  clearFilters(): void {
+    this.query.set('');
+    this.statusFilter.set('');
+  }
+
+  downloadPdf(invoice: Invoice): void {
+    downloadInvoicePdf(invoice, this.patients.nameFor(invoice.patientId));
+  }
 }

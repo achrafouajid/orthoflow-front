@@ -1,12 +1,26 @@
-import { Component, Input, Output, EventEmitter, AfterViewInit, ElementRef, ViewChild, OnChanges, SimpleChanges, inject, OnDestroy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, AfterViewInit, ElementRef, ViewChild, OnChanges, SimpleChanges, inject, OnDestroy, Renderer2 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { DentalChartService } from '../../core/services/dental-chart.service';
 import { ToothState, ToothStatus, DentalChartType } from '../../core/models/patient.model';
 import { PatientTreatment } from '../../core/models/patient-treatment.model';
+import { ToothFinding } from '../../core/models/clinical-record.model';
 import { ADULT_SVG, CHILD_SVG } from './dental-chart-svg-data';
+import {
+  FAMILY_PAINT,
+  PLANNED_PAINT,
+  ToothOverlay,
+  TOOTH_STATUS_GROUPS,
+  TREATMENT_PLAN_INK,
+  odontogramPatternDefs,
+  toothOverlays,
+  toothPaint,
+  toothStatusDefinition,
+  toothStatusHex,
+} from '../../core/clinical/tooth-status';
 
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { ToastService } from '../../core/services/toast.service';
 
 import { FormsModule } from '@angular/forms';
 import jsPDF from 'jspdf';
@@ -35,8 +49,8 @@ import html2canvas from 'html2canvas';
           </span>
         </div>
         <div class="header-right" *ngIf="interactive">
-          <button class="btn-icon-sm" (click)="copyStateString($event)" [title]="'DENTAL_CHART.COPY_STATE' | translate">
-            <span class="material-icons">content_copy</span>
+          <button type="button" class="btn-icon-sm" (click)="copyStateString($event)" [title]="'DENTAL_CHART.COPY_STATE' | translate" [attr.aria-label]="'DENTAL_CHART.COPY_STATE' | translate">
+            <span class="material-icons" aria-hidden="true">content_copy</span>
           </button>
         </div>
       </div>
@@ -52,24 +66,29 @@ import html2canvas from 'html2canvas';
               <span class="material-icons">toll</span>
               {{ 'DENTAL_CHART.TOOTH_NUMBER' | translate }} {{ selectedTooth }}
             </div>
-            <button class="close-btn" (click)="closeStatusMenu()">
-              <span class="material-icons">close</span>
+            <button type="button" class="close-btn" [attr.aria-label]="'COMMON.CLOSE' | translate" (click)="closeStatusMenu()">
+              <span class="material-icons" aria-hidden="true">close</span>
             </button>
           </header>
           
           <div class="status-sections">
-            <div class="status-grid">
-              @for (opt of statusOptions; track opt.value) {
-                <button
-                  class="status-option"
-                  [class.active]="(teeth && teeth[selectedTooth!]?.status) === opt.value"
-                  (click)="selectStatus(selectedTooth!, opt.value)"
-                >
-                  <span class="status-dot" [style.background]="opt.color"></span>
-                  {{ opt.label | translate }}
-                </button>
-              }
-            </div>
+            @for (group of statusGroups; track group.family) {
+              <div class="status-group">
+                <h4 class="status-group-title">{{ group.titleKey | translate }}</h4>
+                <div class="status-grid">
+                  @for (opt of group.options; track opt.value) {
+                    <button type="button"
+                      class="status-option"
+                      [class.active]="(teeth && teeth[selectedTooth!]?.status) === opt.value"
+                      (click)="selectStatus(selectedTooth!, opt.value)"
+                    >
+                      <span class="status-dot" [style.background]="opt.color"></span>
+                      {{ opt.label | translate }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
 
             <div class="note-section">
               <label class="note-label">
@@ -86,7 +105,7 @@ import html2canvas from 'html2canvas';
           </div>
           
           <div class="menu-footer">
-            <button class="btn-reset" (click)="selectStatus(selectedTooth!, 'present')">
+            <button type="button" class="btn-reset" (click)="selectStatus(selectedTooth!, 'present')">
               {{ 'DENTAL_CHART.RESET_PRESENT' | translate }}
             </button>
           </div>
@@ -96,28 +115,34 @@ import html2canvas from 'html2canvas';
 
       <div class="chart-footer">
         <div class="legend">
-          @for (opt of statusOptions; track opt.value) {
-            @if (opt.value !== 'present') {
+          @for (group of statusGroups; track group.family) {
+            @for (opt of group.options; track opt.value) {
               <span class="legend-item">
                 <span class="legend-dot" [style.background]="opt.color"></span>
                 {{ opt.label | translate }}
               </span>
             }
           }
+          @if (hasPlannedWork()) {
+            <span class="legend-item">
+              <span class="legend-dot legend-dot-planned" [style.borderColor]="plannedColor"></span>
+              {{ 'DENTAL_CHART.PLANNED_WORK_PENDING' | translate }}
+            </span>
+          }
         </div>
       </div>
 
       <!-- Report Section -->
       <div class="report-container" [class.open]="showReport">
-        <button class="report-toggle" (click)="showReport = !showReport">
+        <button type="button" class="report-toggle" (click)="showReport = !showReport">
           <div class="toggle-left">
             <span class="material-icons">{{ showReport ? 'expand_less' : 'description' }}</span>
             <span class="report-title">{{ 'DENTAL_CHART.REPORT_TITLE' | translate }}</span>
             <span class="note-count" *ngIf="teethWithNotes.length > 0">{{ teethWithNotes.length }}</span>
           </div>
           <div class="toggle-right">
-            <button class="btn-export-sm" (click)="exportReport($event)" [title]="'DENTAL_CHART.EXPORT_REPORT' | translate">
-              <span class="material-icons">picture_as_pdf</span>
+            <button type="button" class="btn-export-sm" (click)="exportReport($event)" [title]="'DENTAL_CHART.EXPORT_REPORT' | translate" [attr.aria-label]="'DENTAL_CHART.EXPORT_REPORT' | translate">
+              <span class="material-icons" aria-hidden="true">picture_as_pdf</span>
             </button>
             <span class="material-icons toggle-arrow">{{ showReport ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}</span>
           </div>
@@ -157,6 +182,8 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() teeth: Record<string, ToothState> = {};
   @Input() interactive = true;
   @Input() patientTreatments: PatientTreatment[] = [];
+  /** Active clinical findings, used to draw the planned-work overlay (audit VIII.10 / IX). */
+  @Input() findings: ToothFinding[] = [];
 
   @Output() toothSelected = new EventEmitter<ToothState>();
   @Output() toothHovered = new EventEmitter<ToothState | null>();
@@ -166,7 +193,11 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
 
   chartService = inject(DentalChartService);
   private sanitizer = inject(DomSanitizer);
+  private renderer = inject(Renderer2);
+  /** Unlisten functions from the last attachToothListeners() pass — every tooth path gets 2-3 listeners, and initChart() re-runs on every chartType change, so without tracking these they accumulate and multi-fire (audit III.6). */
+  private toothListenerCleanups: Array<() => void> = [];
   private translate = inject(TranslateService);
+  private toast = inject(ToastService);
 
   svgContent: SafeHtml = '';
   hoveredTooth: string | null = null;
@@ -175,21 +206,40 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
   showReport: boolean = false;
   private listenersAttached = false;
 
-  statusOptions: { value: ToothStatus; label: string; color: string }[] = [
-    { value: 'extracted', label: 'DENTAL_CHART.STATUS.EXTRACTED', color: '#ef4444' },
-    { value: 'composite', label: 'DENTAL_CHART.STATUS.COMPOSITE', color: '#3b82f6' },
-    { value: 'amalgam', label: 'DENTAL_CHART.STATUS.AMALGAM', color: '#6b7280' },
-    { value: 'crown', label: 'DENTAL_CHART.STATUS.CROWN', color: '#f59e0b' },
-    { value: 'bridge', label: 'DENTAL_CHART.STATUS.BRIDGE', color: '#f97316' },
-    { value: 'implant', label: 'DENTAL_CHART.STATUS.IMPLANT', color: '#8b5cf6' },
-    { value: 'veneer', label: 'DENTAL_CHART.STATUS.VENEER', color: '#06b6d4' },
-    { value: 'root_canal', label: 'DENTAL_CHART.STATUS.ROOT_CANAL', color: '#ec4899' },
-    { value: 'caries', label: 'DENTAL_CHART.STATUS.CARIES', color: '#dc2626' },
-    { value: 'fracture', label: 'DENTAL_CHART.STATUS.FRACTURE', color: '#991b1b' },
-    { value: 'impacted', label: 'DENTAL_CHART.STATUS.IMPACTED', color: '#a855f7' },
-    { value: 'missing', label: 'DENTAL_CHART.STATUS.MISSING', color: '#d1d5db' },
-    { value: 'post', label: 'DENTAL_CHART.STATUS.POST', color: '#94a3b8' },
-  ];
+  /**
+   * The picker and legend, grouped by clinical family (absent / active
+   * condition / existing restoration) rather than presented as one flat grid
+   * of fifteen colours — see core/clinical/tooth-status.ts for why. Every
+   * status keeps its own dot and its own translated label; the colour is
+   * shared within a family by design, so the family — not the individual
+   * shade — is what a clinician has to recognise on sight.
+   */
+  statusGroups = TOOTH_STATUS_GROUPS.map((group) => ({
+    family: group.family,
+    titleKey: group.titleKey,
+    options: group.statuses.map((status) => ({
+      value: status,
+      label: `DENTAL_CHART.STATUS.${status.toUpperCase()}`,
+      color: FAMILY_PAINT[group.family].solid,
+    })),
+  }));
+
+  /** Flat view of statusGroups, kept for the reset button and PDF export. */
+  private get statusOptions(): { value: ToothStatus; label: string; color: string }[] {
+    return this.statusGroups.flatMap((g) => g.options);
+  }
+
+  readonly plannedColor = PLANNED_PAINT.solid;
+
+  /** fdi → active planned/hidden-condition findings, recomputed on teeth/findings change. */
+  private overlays = new Map<string, ToothOverlay>();
+
+  hasPlannedWork(): boolean {
+    for (const overlay of this.overlays.values()) {
+      if (overlay.planned.length) return true;
+    }
+    return false;
+  }
 
   constructor() {
     this.updateSvgContent();
@@ -204,15 +254,21 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
       this.updateSvgContent();
       this.initChart();
     }
-    if ((changes['teeth'] || changes['patientTreatments']) && this.chartContainer) {
+    if (changes['findings'] || changes['teeth']) {
+      this.overlays = toothOverlays(this.findings ?? []);
+    }
+    if ((changes['teeth'] || changes['patientTreatments'] || changes['findings']) && this.chartContainer) {
       setTimeout(() => {
         this.applyAllToothColors();
         this.applyTreatmentIndicators();
+        this.applyOverlays();
       }, 0);
     }
   }
 
-  ngOnDestroy() { }
+  ngOnDestroy() {
+    this.detachToothListeners();
+  }
 
   private initChart() {
     this.listenersAttached = false;
@@ -220,12 +276,17 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
       this.attachToothListeners();
       this.applyAllToothColors();
       this.applyTreatmentIndicators();
+      this.applyOverlays();
     }, 150); // Increased delay for SVG rendering
   }
 
   private updateSvgContent() {
     const raw = this.chartType === 'adult' ? ADULT_SVG : CHILD_SVG;
-    this.svgContent = this.sanitizer.bypassSecurityTrustHtml(raw);
+    // A second sibling <defs> block, inserted ahead of the SVG's own marker
+    // defs — legal SVG, and it keeps every status pattern generated from one
+    // place (core/clinical/tooth-status.ts) instead of hand-drawn per chart.
+    const withPatterns = raw.replace('<defs>', `${odontogramPatternDefs()}<defs>`);
+    this.svgContent = this.sanitizer.bypassSecurityTrustHtml(withPatterns);
   }
 
 
@@ -233,13 +294,22 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
     return this.chartType === 'adult' ? 'tooth-' : 'child-tooth-';
   }
 
+  /** Ordered tooth ids discovered in the SVG, used for arrow-key navigation between teeth. */
+  private toothOrder: string[] = [];
+
   private attachToothListeners() {
     if (!this.chartContainer) return;
+    // initChart() re-runs on every chartType change without ever detaching
+    // the previous pass's listeners — clear them first so this is always a
+    // fresh attach, not an accumulating one (audit III.6).
+    this.detachToothListeners();
+
     const container = this.chartContainer.nativeElement;
     const prefix = this.getToothPrefix();
 
     // Select all paths that represent a tooth
     const allToothPaths = container.querySelectorAll(`path[class*="${prefix}"]`);
+    this.toothOrder = [];
 
     allToothPaths.forEach((path: any) => {
       const classes = path.getAttribute('class') || '';
@@ -249,20 +319,85 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
 
       const toothId = match[1];
       const el = path as HTMLElement;
+      this.toothOrder.push(toothId);
 
-      el.addEventListener('mouseenter', () => this.onToothHover(toothId));
-      el.addEventListener('mouseleave', () => this.onToothLeave(toothId));
+      this.renderer.setAttribute(el, 'role', 'button');
+      this.renderer.setAttribute(el, 'aria-label', this.getToothAriaLabel(toothId));
+
+      this.toothListenerCleanups.push(
+        this.renderer.listen(el, 'mouseenter', () => this.onToothHover(toothId)),
+        this.renderer.listen(el, 'mouseleave', () => this.onToothLeave(toothId)),
+        this.renderer.listen(el, 'focus', () => this.onToothHover(toothId)),
+        this.renderer.listen(el, 'blur', () => this.onToothLeave(toothId)),
+      );
 
       if (this.interactive) {
-        el.addEventListener('click', (e: MouseEvent) => {
-          e.stopPropagation();
-          this.onToothClick(toothId);
-        });
+        this.renderer.setAttribute(el, 'tabindex', '0');
+        this.toothListenerCleanups.push(
+          this.renderer.listen(el, 'click', (e: MouseEvent) => {
+            e.stopPropagation();
+            this.onToothClick(toothId);
+          }),
+          this.renderer.listen(el, 'keydown', (e: KeyboardEvent) => this.onToothKeydown(e, toothId))
+        );
         el.style.cursor = 'pointer';
       }
     });
 
     this.listenersAttached = true;
+  }
+
+  /** Enter/Space selects the focused tooth; arrow keys move focus between teeth (WAI-ARIA-style roving navigation). */
+  private onToothKeydown(event: KeyboardEvent, toothId: string) {
+    switch (event.key) {
+      case 'Enter':
+      case ' ':
+      case 'Spacebar':
+        event.preventDefault();
+        event.stopPropagation();
+        this.onToothClick(toothId);
+        break;
+      case 'ArrowRight':
+      case 'ArrowDown':
+        event.preventDefault();
+        this.focusAdjacentTooth(toothId, 1);
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        event.preventDefault();
+        this.focusAdjacentTooth(toothId, -1);
+        break;
+    }
+  }
+
+  private focusAdjacentTooth(currentToothId: string, delta: number) {
+    if (!this.toothOrder.length || !this.chartContainer) return;
+    const currentIndex = this.toothOrder.indexOf(currentToothId);
+    if (currentIndex === -1) return;
+    const nextIndex = (currentIndex + delta + this.toothOrder.length) % this.toothOrder.length;
+    const nextToothId = this.toothOrder[nextIndex];
+    const prefix = this.getToothPrefix();
+    const nextEl = this.chartContainer.nativeElement.querySelector(`path.${prefix}${nextToothId}`) as HTMLElement;
+    nextEl?.focus();
+  }
+
+  /** Rebuilds the aria-label for a tooth to reflect its current status; called after status changes. */
+  private refreshToothAriaLabel(toothId: string) {
+    if (!this.chartContainer) return;
+    const prefix = this.getToothPrefix();
+    const el = this.chartContainer.nativeElement.querySelector(`path.${prefix}${toothId}`) as HTMLElement;
+    if (el) this.renderer.setAttribute(el, 'aria-label', this.getToothAriaLabel(toothId));
+  }
+
+  getToothAriaLabel(toothId: string): string {
+    const name = this.getToothName(toothId);
+    const status = (this.teeth && this.teeth[toothId])?.status || 'present';
+    return `FDI ${toothId} - ${name} - ${status}`;
+  }
+
+  private detachToothListeners() {
+    for (const unlisten of this.toothListenerCleanups) unlisten();
+    this.toothListenerCleanups = [];
   }
 
   onToothHover(toothId: string) {
@@ -284,9 +419,9 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
     if (!parentEl) return;
 
     if (active) {
-      parentEl.style.stroke = '#4f46e5';
+      parentEl.style.stroke = '#03045e';
       parentEl.style.strokeWidth = '2px';
-      parentEl.style.filter = 'drop-shadow(0 0 2px rgba(79,70,229,0.5))';
+      parentEl.style.filter = 'drop-shadow(0 0 2px rgba(3,4,94,0.5))';
     } else {
       parentEl.style.stroke = '#000';
       parentEl.style.strokeWidth = '1px';
@@ -385,8 +520,11 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
         y += 6;
       }
       
-      // Color dot
-      doc.setFillColor(opt.color);
+      // Color dot — jsPDF wants r,g,b numbers, not the `rgb()` CSS syntax
+      // `opt.color` carries for the on-screen swatch, so read the same
+      // family colour back out as a hex triplet.
+      const hex = toothStatusHex(opt.value) ?? 0x64748b;
+      doc.setFillColor((hex >> 16) & 255, (hex >> 8) & 255, hex & 255);
       doc.circle(x + 2, y - 1, 1.5, 'F');
       
       // Label
@@ -503,6 +641,7 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
       this.chartUpdated.emit(serialized);
     }
     this.applyToothColor(toothId);
+    this.refreshToothAriaLabel(toothId);
   }
 
   closeStatusMenu() {
@@ -529,15 +668,9 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
     if (!el) return;
 
     const status = (this.teeth && this.teeth[toothId])?.status || 'present';
-    const color = DentalChartService.STATUS_COLORS[status];
-
-    if (status === 'present' || color === 'none') {
-      el.style.fill = 'transparent';
-      el.style.opacity = '1';
-    } else {
-      el.style.fill = color;
-      el.style.opacity = (status === 'extracted' || status === 'missing') ? '0.2' : '0.6';
-    }
+    const paint = toothPaint(status);
+    el.style.fill = paint.fill;
+    el.style.fillOpacity = paint.fillOpacity;
   }
 
   getToothStatusLabel(toothId: string): string {
@@ -545,10 +678,10 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
     return `DENTAL_CHART.STATUS.${status.toUpperCase()}`;
   }
 
+  /** Text-safe (AA on its own tint) colour for the hover label and report list. */
   getStatusColor(toothId: string): string {
     const status = (this.teeth && this.teeth[toothId])?.status || 'present';
-    const color = DentalChartService.STATUS_COLORS[status];
-    return color === 'none' ? '#64748b' : color;
+    return FAMILY_PAINT[toothStatusDefinition(status).family].text;
   }
 
   getToothName(toothId: string): string {
@@ -585,7 +718,7 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
       if (state) {
         navigator.clipboard.writeText(state).then(() => {
           this.translate.get('DENTAL_CHART.STATE_COPIED').subscribe(msg => {
-            alert(msg);
+            this.toast.success(msg);
           });
         });
       }
@@ -605,16 +738,80 @@ export class DentalChartComponent implements AfterViewInit, OnChanges, OnDestroy
         if (!el) return;
 
         if (pt.status === 'COMPLETED') {
-          el.style.stroke = '#10b981';
+          el.style.stroke = TREATMENT_PLAN_INK.COMPLETED;
           el.style.strokeWidth = '3px';
         } else if (pt.status === 'ACTIVE') {
-          el.style.stroke = '#f59e0b';
+          el.style.stroke = TREATMENT_PLAN_INK.ACTIVE;
           el.style.strokeWidth = '3px';
         } else if (pt.status === 'PLANNED') {
-          el.style.stroke = '#3b82f6';
+          el.style.stroke = TREATMENT_PLAN_INK.PLANNED;
           el.style.strokeWidth = '2px';
         }
       });
     });
+  }
+
+  /**
+   * Draws the planned-work layer: findings with kind TREATMENT_REQUIRED are
+   * invisible in the derived `tooth_states.status` the fill above paints
+   * from (every TREATMENT_REQUIRED code in the backend's FindingCatalog has
+   * a null implied status), so without this pass a dictated or clicked
+   * "extraction required" is recorded and then never seen again on the
+   * chart. Drawn as a dashed outline over whatever the tooth's condition
+   * already is — never replacing it — because the pathology is what
+   * justifies the plan and a consenting patient needs to see both.
+   *
+   * Also marks the rarer case of an active CONDITION finding that the single
+   * derived status can't represent either (a defective crown still paints as
+   * a sound crown; see CONDITIONS_THE_FILL_CANNOT_SHOW in tooth-status.ts).
+   *
+   * Runs after applyTreatmentIndicators() so a clinical finding — a record,
+   * not a scheduling label — has the last say over the tooth's outline.
+   */
+  private applyOverlays() {
+    if (!this.chartContainer) return;
+    const prefix = this.getToothPrefix();
+    const svg = this.chartContainer.nativeElement.querySelector('svg');
+
+    svg?.querySelectorAll('.odo-overlay-marker').forEach((n) => n.remove());
+    svg?.querySelectorAll(`[class*="${prefix}"][class*="-parent"]`).forEach((el: any) => {
+      if (el.dataset.odoOverlay) {
+        el.style.strokeDasharray = 'none';
+        delete el.dataset.odoOverlay;
+      }
+    });
+
+    for (const [fdi, overlay] of this.overlays) {
+      const el = svg?.querySelector(`.${prefix}${fdi}-parent`) as SVGGraphicsElement & HTMLElement | null;
+      if (!el) continue;
+
+      if (overlay.planned.length) {
+        el.style.stroke = PLANNED_PAINT.ink;
+        el.style.strokeWidth = '2.5px';
+        el.style.strokeDasharray = '3,2';
+        el.dataset.odoOverlay = '1';
+      }
+
+      if (!svg || (!overlay.planned.length && !overlay.unpaintedConditions.length)) continue;
+
+      const bbox = el.getBBox();
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      marker.setAttribute('class', 'odo-overlay-marker');
+      marker.setAttribute('cx', String(bbox.x + bbox.width));
+      marker.setAttribute('cy', String(bbox.y));
+      marker.setAttribute('r', '2.2');
+      marker.setAttribute(
+        'fill',
+        overlay.unpaintedConditions.length ? FAMILY_PAINT.condition.solid : PLANNED_PAINT.solid,
+      );
+      marker.setAttribute('stroke', '#ffffff');
+      marker.setAttribute('stroke-width', '0.6');
+      const titleKey = overlay.unpaintedConditions.length
+        ? 'DENTAL_CHART.CONDITION_NOT_SHOWN'
+        : 'DENTAL_CHART.PLANNED_WORK_PENDING';
+      this.translate.get(titleKey).subscribe((label) => marker.setAttribute('aria-label', label));
+      marker.setAttribute('role', 'img');
+      svg.appendChild(marker);
+    }
   }
 }

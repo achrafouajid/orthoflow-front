@@ -5,8 +5,10 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ThreeDentalViewerComponent } from '../../shared/components/three-dental-viewer/three-dental-viewer.component';
 import { ThreeDentalSyncService, ViewType } from '../../core/services/three-dental-sync.service';
 import { ToothState, ToothStatus } from '../../core/models/patient.model';
+import { FAMILY_PAINT, TOOTH_STATUS_GROUPS, toothStatusDefinition } from '../../core/clinical/tooth-status';
 import { DentalChartService } from '../../core/services/dental-chart.service';
 import { DentalAuditLogComponent } from './components/dental-audit-log.component';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-dental-3d-canvas',
@@ -23,26 +25,28 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
       <div class="canvas-toolbar">
         <div class="toolbar-left">
           <span class="view-mode-title">
-            <span class="material-icons text-indigo-500">3d_rotation</span>
+            <span class="material-icons text-ink-900">3d_rotation</span>
             3D Multi-View Dental Canvas
           </span>
         </div>
         <div class="toolbar-right">
-          <button 
-            class="layout-btn" 
-            [class.active]="gridMode() === 'grid'" 
+          <button type="button"
+            class="layout-btn"
+            [class.active]="gridMode() === 'grid'"
             (click)="gridMode.set('grid')"
             title="Grid Layout (2x2)"
+            aria-label="Grid Layout (2x2)"
           >
-            <span class="material-icons">grid_view</span>
+            <span class="material-icons" aria-hidden="true">grid_view</span>
           </button>
-          <button 
-            class="layout-btn" 
-            [class.active]="gridMode() === 'single'" 
+          <button type="button"
+            class="layout-btn"
+            [class.active]="gridMode() === 'single'"
             (click)="gridMode.set('single')"
             title="Single Focus Layout"
+            aria-label="Single Focus Layout"
           >
-            <span class="material-icons">crop_square</span>
+            <span class="material-icons" aria-hidden="true">crop_square</span>
           </button>
         </div>
       </div>
@@ -57,7 +61,7 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                 <div class="view-quadrant" [class.focused]="focusedView() === v.type">
                   <header class="quadrant-header">
                     <span class="quadrant-title">
-                      <span class="material-icons text-xs mr-1">{{ v.icon }}</span>
+                      <span class="material-icons text-xs me-1">{{ v.icon }}</span>
                       {{ v.label }}
                     </span>
                     <div class="quadrant-actions">
@@ -72,8 +76,8 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                           Isolated
                         </span>
                       }
-                      <button class="icon-btn-sm" (click)="maximizeView(v.type)">
-                        <span class="material-icons">fullscreen</span>
+                      <button type="button" class="icon-btn-sm" aria-label="Maximize {{ v.label }} view" (click)="maximizeView(v.type)">
+                        <span class="material-icons" aria-hidden="true">fullscreen</span>
                       </button>
                     </div>
                   </header>
@@ -82,6 +86,7 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                       [viewType]="v.type"
                       [teethStatus]="teethStates()[v.type]"
                       [highlightedTooth]="hoveredTooth()"
+                      [lazy]="v.type !== 'frontal'"
                       (toothClicked)="onToothClick($event, v.type)"
                       (toothHovered)="onToothHover($event)"
                     />
@@ -95,12 +100,12 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
               <header class="quadrant-header">
                 <div class="flex items-center gap-4">
                   <span class="quadrant-title">
-                    <span class="material-icons text-xs mr-1">{{ getActiveViewInfo().icon }}</span>
+                    <span class="material-icons text-xs me-1">{{ getActiveViewInfo().icon }}</span>
                     {{ getActiveViewInfo().label }}
                   </span>
                   <div class="view-tabs">
                     @for (v of views; track v.type) {
-                      <button 
+                      <button type="button" 
                         class="view-tab-btn" 
                         [class.active]="focusedView() === v.type" 
                         (click)="focusedView.set(v.type)"
@@ -111,8 +116,8 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                   </div>
                 </div>
                 <div class="quadrant-actions">
-                  <button class="icon-btn-sm" (click)="gridMode.set('grid')">
-                    <span class="material-icons">grid_view</span>
+                  <button type="button" class="icon-btn-sm" aria-label="Back to grid layout" (click)="gridMode.set('grid')">
+                    <span class="material-icons" aria-hidden="true">grid_view</span>
                   </button>
                 </div>
               </header>
@@ -121,6 +126,7 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                   [viewType]="focusedView()"
                   [teethStatus]="teethStates()[focusedView()]"
                   [highlightedTooth]="hoveredTooth()"
+                  [lazy]="false"
                   (toothClicked)="onToothClick($event, focusedView())"
                   (toothHovered)="onToothHover($event)"
                 />
@@ -137,8 +143,8 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                 <span class="tooth-fdi-badge">#{{ toothId }}</span>
                 <h3>Tooth Details</h3>
               </div>
-              <button class="close-btn" (click)="selectedTooth.set(null)">
-                <span class="material-icons">close</span>
+              <button type="button" class="close-btn" aria-label="Close tooth details" (click)="selectedTooth.set(null)">
+                <span class="material-icons" aria-hidden="true">close</span>
               </button>
             </header>
 
@@ -153,7 +159,7 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                 <span class="section-title">Assign Status (View: {{ getActiveViewLabel() }})</span>
                 <div class="status-chips-grid">
                   @for (opt of statusOptions; track opt.value) {
-                    <button
+                    <button type="button"
                       class="status-chip"
                       [class.active]="getCurrentToothStatus(toothId) === opt.value"
                       (click)="updateToothStatus(toothId, opt.value)"
@@ -182,10 +188,10 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                   @for (entry of getToothAuditLogs(toothId); track entry.timestamp) {
                     <div class="audit-mini-item">
                       <div class="flex justify-between text-xs font-semibold">
-                        <span [class.text-indigo-600]="!entry.autoSyncTriggered" [class.text-amber-600]="entry.autoSyncTriggered">
+                        <span [class.text-ink-900]="!entry.autoSyncTriggered" [class.text-amber-600]="entry.autoSyncTriggered">
                           {{ entry.autoSyncTriggered ? 'System (Sync)' : entry.user }}
                         </span>
-                        <span class="text-slate-400">{{ entry.timestamp | date:'shortTime' }}</span>
+                        <span class="text-slate-500">{{ entry.timestamp | date:'shortTime' }}</span>
                       </div>
                       <div class="text-[11px] text-slate-600 mt-1">
                         Changed status in <strong>{{ entry.viewModified | uppercase }}</strong> view: 
@@ -193,14 +199,14 @@ import { DentalAuditLogComponent } from './components/dental-audit-log.component
                       </div>
                     </div>
                   } @empty {
-                    <div class="text-xs text-slate-400 italic">No history modifications logged yet.</div>
+                    <div class="text-xs text-slate-500 italic">No history modifications logged yet.</div>
                   }
                 </div>
               </div>
 
               <!-- Action button -->
-              <button class="btn-primary w-full justify-center mt-4" (click)="triggerTreatmentAssign(toothId)">
-                <span class="material-icons mr-1">add</span>
+              <button type="button" class="btn-primary w-full justify-center mt-4" (click)="triggerTreatmentAssign(toothId)">
+                <span class="material-icons me-1">add</span>
                 Assign Treatment to #{{ toothId }}
               </button>
             </div>
@@ -230,8 +236,14 @@ export class Dental3DCanvasComponent implements OnInit {
 
   syncService = inject(ThreeDentalSyncService);
   private translate = inject(TranslateService);
+  private authService = inject(AuthService);
 
-  gridMode = signal<'grid' | 'single'>('grid');
+  private currentUserLabel(): string {
+    const user = this.authService.currentUser();
+    return user ? `${user.firstName} ${user.lastName}` : 'Unknown user';
+  }
+
+  gridMode = signal<'grid' | 'single'>('single');
   focusedView = signal<ViewType>('frontal');
 
   selectedTooth = signal<string | null>(null);
@@ -246,21 +258,16 @@ export class Dental3DCanvasComponent implements OnInit {
     { type: 'roots', label: 'Roots (Apical)', icon: 'blur_on' },
   ];
 
+  /** Same source as the 2D chart and the WebGL material colour — see core/clinical/tooth-status.ts. */
   statusOptions = [
-    { value: 'present' as ToothStatus, label: 'DENTAL_CHART.STATUS.PRESENT', color: '#10b981' },
-    { value: 'extracted' as ToothStatus, label: 'DENTAL_CHART.STATUS.EXTRACTED', color: '#ef4444' },
-    { value: 'composite' as ToothStatus, label: 'DENTAL_CHART.STATUS.COMPOSITE', color: '#3b82f6' },
-    { value: 'amalgam' as ToothStatus, label: 'DENTAL_CHART.STATUS.AMALGAM', color: '#6b7280' },
-    { value: 'crown' as ToothStatus, label: 'DENTAL_CHART.STATUS.CROWN', color: '#f59e0b' },
-    { value: 'bridge' as ToothStatus, label: 'DENTAL_CHART.STATUS.BRIDGE', color: '#f97316' },
-    { value: 'implant' as ToothStatus, label: 'DENTAL_CHART.STATUS.IMPLANT', color: '#8b5cf6' },
-    { value: 'veneer' as ToothStatus, label: 'DENTAL_CHART.STATUS.VENEER', color: '#06b6d4' },
-    { value: 'root_canal' as ToothStatus, label: 'DENTAL_CHART.STATUS.ROOT_CANAL', color: '#ec4899' },
-    { value: 'caries' as ToothStatus, label: 'DENTAL_CHART.STATUS.CARIES', color: '#dc2626' },
-    { value: 'fracture' as ToothStatus, label: 'DENTAL_CHART.STATUS.FRACTURE', color: '#991b1b' },
-    { value: 'impacted' as ToothStatus, label: 'DENTAL_CHART.STATUS.IMPACTED', color: '#a855f7' },
-    { value: 'missing' as ToothStatus, label: 'DENTAL_CHART.STATUS.MISSING', color: '#d1d5db' },
-    { value: 'post' as ToothStatus, label: 'DENTAL_CHART.STATUS.POST', color: '#94a3b8' },
+    { value: 'present' as ToothStatus, label: 'DENTAL_CHART.STATUS.PRESENT', color: FAMILY_PAINT.sound.solid },
+    ...TOOTH_STATUS_GROUPS.flatMap((g) =>
+      g.statuses.map((status) => ({
+        value: status,
+        label: `DENTAL_CHART.STATUS.${status.toUpperCase()}`,
+        color: FAMILY_PAINT[toothStatusDefinition(status).family].solid,
+      })),
+    ),
   ];
 
   teethStates = this.syncService.getAllTeethStates();
@@ -310,7 +317,7 @@ export class Dental3DCanvasComponent implements OnInit {
       status,
       view,
       this.currentToothNotes,
-      'Doctor'
+      this.currentUserLabel()
     );
   }
 
@@ -326,7 +333,7 @@ export class Dental3DCanvasComponent implements OnInit {
       currentStatus,
       view,
       this.currentToothNotes,
-      'Doctor'
+      this.currentUserLabel()
     );
   }
 

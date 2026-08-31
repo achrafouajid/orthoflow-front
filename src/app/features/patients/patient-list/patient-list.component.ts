@@ -1,386 +1,270 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { PatientService } from '../../../core/services/patient.service';
+import { ScheduleService } from '../../../core/services/schedule.service';
+import { Appointment, Patient } from '../../../core/models/patient.model';
 import { TranslateModule } from '@ngx-translate/core';
+import { IconComponent } from '../../../shared/ui/icon.component';
+import { StatusPillComponent } from '../../../shared/ui/status-pill.component';
 
+/**
+ * Patient register.
+ *
+ * Built entirely from the shared primitives in `styles.css` — this screen
+ * previously carried ~300 lines of local CSS including its own
+ * `.btn-primary`, `.btn-secondary`, `.status-badge` and `.icon-btn`, none
+ * of which matched the definitions on the neighbouring screens.
+ */
 @Component({
   selector: 'app-patient-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule, IconComponent, StatusPillComponent],
   template: `
-    <div class="patient-list-container">
-      <header class="page-header">
-        <div class="header-content">
-          <h1>{{ 'PATIENTS.TITLE' | translate }}</h1>
-          <p>{{ 'PATIENTS.SUBTITLE' | translate }}</p>
+    <div class="anim-rise">
+      <header class="page-head">
+        <div>
+          <h1 class="page-title">{{ 'PATIENTS.TITLE' | translate }}</h1>
+          <p class="page-sub">{{ 'PATIENTS.SUBTITLE' | translate }}</p>
         </div>
-        <button class="btn-primary" routerLink="register">
-          <span class="material-icons">add</span>
-          {{ 'COMMON.ADD' | translate }} {{ 'PATIENTS.NAME' | translate }}
-        </button>
+        <div class="page-actions">
+          <a class="btn btn-primary" routerLink="register">
+            <app-icon name="user-plus" [size]="16" />
+            {{ 'PATIENTS.ADD' | translate }}
+          </a>
+        </div>
       </header>
 
-      <div class="filters-bar">
-        <div class="search-input">
-          <span class="material-icons">search</span>
-          <input type="text" [placeholder]="'COMMON.SEARCH' | translate" />
-        </div>
-        <div class="filters-actions">
-          <button class="btn-secondary">
-            <span class="material-icons">filter_list</span>
-            {{ 'COMMON.FILTER' | translate }}
-          </button>
+      <!-- Filters -->
+      <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label class="search">
+          <span class="sr-only">{{ 'COMMON.SEARCH' | translate }}</span>
+          <app-icon name="search" [size]="16" />
+          <input
+            class="input"
+            type="search"
+            [placeholder]="'PATIENTS.SEARCH_PLACEHOLDER' | translate"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event)"
+          />
+        </label>
+
+        <!-- Status filter doubles as the count readout: a practice owner
+             wants to know how many patients are in active treatment, and
+             this is where they are already looking. -->
+        <div class="seg" role="group" [attr.aria-label]="'COMMON.FILTER' | translate">
+          @for (f of filters; track f.value) {
+            <button
+              type="button"
+              class="seg-item"
+              [class.is-active]="statusFilter() === f.value"
+              [attr.aria-pressed]="statusFilter() === f.value"
+              (click)="statusFilter.set(f.value)"
+            >
+              {{ f.key | translate }}
+              <span class="ms-1 tabular-nums opacity-60">{{ countFor(f.value) }}</span>
+            </button>
+          }
         </div>
       </div>
 
-      <div class="table-card">
-        <table class="patients-table">
-          <thead>
-            <tr>
-              <th>{{ 'PATIENTS.NAME' | translate }}</th>
-              <th>{{ 'COMMON.STATUS' | translate }}</th>
-              <th>{{ 'PATIENTS.NEXT_APPOINTMENT' | translate }}</th>
-              <th>{{ 'PATIENTS.CONTACT' | translate }}</th>
-              <th>{{ 'COMMON.ACTIONS' | translate }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (patient of patientService.patients(); track patient.id) {
-              <tr class="clickable-row" [routerLink]="[patient.id]">
-                <td>
-                  <div class="patient-info">
-                    <div class="patient-avatar">
-                      {{ patient.firstName[0] }}{{ patient.lastName[0] }}
-                    </div>
-                    <div class="patient-details">
-                      <span class="patient-name">{{ patient.firstName }} {{ patient.lastName }}</span>
-                      <span class="patient-id">ID: {{ patient.id }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="status-badge" [class]="patient.status.toLowerCase()">
-                    {{ patient.status }}
-                  </span>
-                </td>
-                <td>
-                  <div class="appointment-info">
-                    <span class="date">May 24, 2026</span>
-                    <span class="type">Consultation</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="contact-info">
-                    <span>{{ patient.phone }}</span>
-                    <span class="email">{{ patient.email }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="row-actions">
-                    <button class="icon-btn" [title]="'COMMON.VIEW' | translate">
-                      <span class="material-icons">visibility</span>
-                    </button>
-                    <button class="icon-btn" [title]="'COMMON.EDIT' | translate" [routerLink]="[patient.id, 'edit']" (click)="$event.stopPropagation()">
-                      <span class="material-icons">edit</span>
-                    </button>
-                  </div>
-                </td>
+      <!-- Table -->
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'PATIENTS.NAME' | translate }}</th>
+                <th scope="col">{{ 'COMMON.STATUS' | translate }}</th>
+                <th scope="col">{{ 'PATIENTS.NEXT_APPOINTMENT' | translate }}</th>
+                <th scope="col">{{ 'PATIENTS.CONTACT' | translate }}</th>
+                <th scope="col" class="cell-actions">
+                  <span class="sr-only">{{ 'COMMON.ACTIONS' | translate }}</span>
+                </th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (patient of visible(); track patient.id) {
+                <!-- The row is a mouse convenience, not a control. Giving
+                     the tr itself role="button" put an interactive element
+                     inside an interactive element (axe nested-interactive)
+                     and hid the row's own links from screen readers. The
+                     accessible, keyboard-reachable primary action is the
+                     name link below; the row click just forwards to it. -->
+                <tr class="row-clickable" (click)="navigateToPatient(patient.id)">
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <span
+                        class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-petrol-50 text-2xs font-bold text-petrol-700 ring-1 ring-petrol-100"
+                        aria-hidden="true"
+                      >{{ initials(patient) }}</span>
+                      <span class="flex min-w-0 flex-col leading-tight">
+                        <a
+                          class="truncate font-bold text-ink-900 no-underline hover:text-petrol-700"
+                          [routerLink]="[patient.id]"
+                          (click)="$event.stopPropagation()"
+                        >{{ patient.firstName }} {{ patient.lastName }}</a>
+                        <span class="mono text-2xs text-ink-500">#{{ patient.id }}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td [attr.data-label]="'COMMON.STATUS' | translate"><app-status-pill [status]="patient.status" /></td>
+                  <td [attr.data-label]="'PATIENTS.NEXT_APPOINTMENT' | translate">
+                    @if (nextAppointmentFor(patient.id); as appt) {
+                      <span class="flex flex-col leading-tight">
+                        <span class="font-semibold text-ink-900">{{ appt.dateTime | date: 'mediumDate' }}</span>
+                        <span class="text-2xs text-ink-500">{{ appt.type }}</span>
+                      </span>
+                    } @else {
+                      <span class="text-ink-400">—</span>
+                    }
+                  </td>
+                  <td [attr.data-label]="'PATIENTS.CONTACT' | translate">
+                    <span class="flex flex-col leading-tight">
+                      <span class="text-ink-900">{{ patient.phone }}</span>
+                      <span class="truncate text-2xs text-ink-500">{{ patient.email }}</span>
+                    </span>
+                  </td>
+                  <td class="cell-actions">
+                    <div class="flex justify-end gap-1">
+                      <a
+                        class="btn btn-ghost btn-icon"
+                        [routerLink]="[patient.id, 'edit']"
+                        (click)="$event.stopPropagation()"
+                        [title]="'COMMON.EDIT' | translate"
+                        [attr.aria-label]="('COMMON.EDIT' | translate) + ' — ' + patient.firstName + ' ' + patient.lastName"
+                      >
+                        <app-icon name="edit" [size]="16" />
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="!p-0">
+                    <div class="empty">
+                      <span class="empty-icon"><app-icon name="users" [size]="20" /></span>
+                      @if (hasAnyPatients()) {
+                        <p class="empty-title">{{ 'PATIENTS.NO_MATCHES' | translate }}</p>
+                        <p class="empty-text">{{ 'PATIENTS.NO_MATCHES_HINT' | translate }}</p>
+                        <button type="button" class="btn btn-secondary btn-sm" (click)="clearFilters()">
+                          {{ 'COMMON.CLEAR_FILTERS' | translate }}
+                        </button>
+                      } @else {
+                        <p class="empty-title">{{ 'PATIENTS.EMPTY_TITLE' | translate }}</p>
+                        <p class="empty-text">{{ 'PATIENTS.EMPTY_TEXT' | translate }}</p>
+                        <a class="btn btn-primary btn-sm" routerLink="register">
+                          <app-icon name="user-plus" [size]="15" />
+                          {{ 'PATIENTS.ADD' | translate }}
+                        </a>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `,
   styles: [`
-    .patient-list-container {
-      padding: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-    }
-
-    .header-content h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    .header-content p {
-      color: var(--text-secondary);
-      margin: 0.5rem 0 0 0;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      color: white;
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
-      transition: all 0.2s ease;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
-    }
-
-    .filters-bar {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .search-input {
-      flex: 1;
-      position: relative;
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      padding: 0 1rem;
-      transition: all 0.2s ease;
-    }
-
-    .search-input:focus-within {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-    }
-
-    .search-input input {
-      border: none;
-      padding: 0.75rem 0.5rem;
-      width: 100%;
-      outline: none;
-      font-size: 0.95rem;
-    }
-
-    .search-input .material-icons {
-      color: #9ca3af;
-    }
-
-    .btn-secondary {
-      background: white;
-      border: 1px solid #e5e7eb;
-      color: #374151;
-      padding: 0.75rem 1.25rem;
-      border-radius: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn-secondary:hover {
-      background: #f9fafb;
-    }
-
-    .table-card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-      border: 1px solid #e5e7eb;
-      overflow: hidden;
-    }
-
-    .patients-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-
-    .patients-table th {
-      background: #f9fafb;
-      padding: 1rem 1.5rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.025em;
-    }
-
-    .patients-table td {
-      padding: 1.25rem 1.5rem;
-      border-top: 1px solid #f3f4f6;
-    }
-
-    .clickable-row {
-      cursor: pointer;
-      transition: background 0.2s ease;
-    }
-
-    .clickable-row:hover {
-      background: #f8fafc;
-    }
-
-    .patient-info {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .patient-avatar {
-      width: 40px;
-      height: 40px;
-      background: #e0e7ff;
-      color: #4338ca;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.9rem;
-    }
-
-    .patient-details {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .patient-name {
-      font-weight: 600;
-      color: #111827;
-    }
-
-    .patient-id {
-      font-size: 0.8rem;
-      color: #6b7280;
-    }
-
-    .status-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
-    .status-badge.active {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .appointment-info, .contact-info {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .appointment-info .date, .contact-info span {
-      font-size: 0.9rem;
-      color: #374151;
-      font-weight: 500;
-    }
-
-    .appointment-info .type, .contact-info .email {
-      font-size: 0.8rem;
-      color: #6b7280;
-    }
-
-    .row-actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .icon-btn {
-      background: transparent;
-      border: none;
-      color: #9ca3af;
-      padding: 0.5rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .icon-btn:hover {
-      background: #f3f4f6;
-      color: #4f46e5;
-    }
-
-    /* Responsive Styles */
-    @media (max-width: 768px) {
-      .patient-list-container {
-        padding: 1rem;
-      }
-
-      .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-      }
-
-      .btn-primary {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .filters-bar {
-        flex-direction: column;
-      }
-
-      .btn-secondary {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .table-card {
-        border: none;
-        box-shadow: none;
-        background: transparent;
-      }
-
-      .patients-table thead {
-        display: none;
-      }
-
-      .patients-table tr {
+    /* Below the table breakpoint each row becomes a card. Header cells are
+       hidden, so each value carries its own label via data-label. */
+    @media (max-width: 767px) {
+      .table-wrap { border: 0; box-shadow: none; background: transparent; }
+      .data-table thead { display: none; }
+      .data-table tbody tr {
         display: block;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        padding: 1rem;
+        margin-bottom: var(--space-3);
+        padding: var(--space-3);
+        background: var(--surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
       }
-
-      .patients-table td {
-        display: block;
-        padding: 0.5rem 0;
-        border: none;
+      .data-table tbody tr:hover { box-shadow: var(--shadow-md); }
+      .data-table tbody td {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        padding: var(--space-1) 0;
+        border: 0;
       }
-
-      .patient-info {
-        margin-bottom: 0.5rem;
+      .data-table tbody td[data-label] { justify-content: space-between; }
+      .data-table tbody td[data-label]::before {
+        content: attr(data-label);
+        font-size: var(--text-2xs);
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--text-muted);
       }
-
-      .status-badge {
-        display: inline-block;
-        margin-bottom: 0.5rem;
-      }
-
-      .row-actions {
-        margin-top: 1rem;
-        justify-content: flex-end;
-        border-top: 1px solid #f3f4f6;
-        padding-top: 1rem;
-      }
+      .data-table tbody td:first-child { padding-bottom: var(--space-2); }
+      .data-table tbody td:first-child::before { display: none; }
+      .cell-actions { justify-content: flex-end; }
     }
-  `]
+  `],
 })
 export class PatientListComponent {
-  patientService = inject(PatientService);
+  readonly patientService = inject(PatientService);
+  private readonly scheduleService = inject(ScheduleService);
+  private readonly router = inject(Router);
+
+  readonly query = signal('');
+  readonly statusFilter = signal<'ALL' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED'>('ALL');
+
+  readonly filters = [
+    { value: 'ALL', key: 'COMMON.ALL' },
+    { value: 'ACTIVE', key: 'STATUS.ACTIVE' },
+    { value: 'ON_HOLD', key: 'STATUS.ON_HOLD' },
+    { value: 'COMPLETED', key: 'STATUS.COMPLETED' },
+  ] as const;
+
+  readonly hasAnyPatients = computed(() => this.patientService.patients().length > 0);
+
+  readonly visible = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    const status = this.statusFilter();
+    return this.patientService.patients().filter((p) => {
+      if (status !== 'ALL' && p.status !== status) return false;
+      if (!q) return true;
+      return [p.firstName, p.lastName, p.email, p.phone, p.id]
+        .some((v) => (v ?? '').toString().toLowerCase().includes(q));
+    });
+  });
+
+  countFor(value: string): number {
+    const all = this.patientService.patients();
+    return value === 'ALL' ? all.length : all.filter((p) => p.status === value).length;
+  }
+
+  initials(p: Patient): string {
+    return `${p.firstName?.[0] ?? ''}${p.lastName?.[0] ?? ''}`.toUpperCase();
+  }
+
+  nextAppointmentFor(patientId: string): Appointment | null {
+    const now = Date.now();
+    return (
+      this.scheduleService
+        .appointments()
+        .filter(
+          (a) =>
+            a.patientId === patientId &&
+            a.status !== 'CANCELLED' &&
+            new Date(a.dateTime).getTime() >= now,
+        )
+        .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())[0] ?? null
+    );
+  }
+
+  clearFilters(): void {
+    this.query.set('');
+    this.statusFilter.set('ALL');
+  }
+
+  navigateToPatient(patientId: string): void {
+    this.router.navigate([patientId]);
+  }
 }

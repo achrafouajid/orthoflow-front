@@ -1,56 +1,938 @@
+/* =========================================================================
+   OrthoFlow — global stylesheet
+
+   Loaded after `src/tokens.css` (see angular.json `styles`), which defines
+   every value referenced here.
+
+   Ordering matters, and it is deliberate:
+
+     @tailwind base        framework resets
+     ...our base rules     element defaults
+     @tailwind components  (framework — unused)
+     ...our component layer the shared primitives every screen builds from
+     @tailwind utilities   last, so a screen can always override a component
+                           class with a utility (`class="btn-primary w-full"`)
+
+   These rules are plain CSS, deliberately NOT inside `@layer components`.
+   Tailwind treats everything in that directive as candidate-gated and drops
+   any class it cannot find as a literal string in the scanned templates —
+   which silently deleted `.pill-active` and friends, because the status
+   pill composes its class name at runtime (`'pill-' + tone()`). A design
+   system must not depend on a scanner guessing right, so it lives outside
+   the gate.
+
+   Anything a screen needs more than once belongs here, not in a component's
+   `styles: []` block. The rule that keeps this from re-fracturing: a
+   component may compose these classes and may add layout, but must not
+   redefine `.btn-*`, `.card`, `.input`, `.pill-*` or `.data-table`.
+   ========================================================================= */
+
 @tailwind base;
+
+/* =========================================================================
+   BASE
+   ========================================================================= */
+
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    background-color: var(--app-bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Manrope's default figures are proportional. Clinical and financial
+       columns have to align digit-for-digit down a table, so tabular
+       figures are the product-wide default. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    color: var(--text);
+    line-height: var(--leading-tight);
+    font-weight: 700;
+    letter-spacing: -0.011em;
+    margin: 0;
+  }
+
+  /* Tighter tracking as type gets larger — large text set at body tracking
+     reads loose and unfinished. */
+  h1 { font-size: var(--text-2xl); letter-spacing: -0.021em; }
+  h2 { font-size: var(--text-xl);  letter-spacing: -0.017em; }
+  h3 { font-size: var(--text-lg);  letter-spacing: -0.014em; }
+
+  p { margin: 0; }
+
+  /* One focus ring for the entire product. `!important` is deliberate: the
+     codebase still carries ~84 component-level `outline: none` rules, and
+     the ring has to survive every one of them (WCAG 2.4.7). */
+  :where(a, button, input, select, textarea, summary, [tabindex], [contenteditable]):focus-visible {
+    outline: 2px solid var(--focus-ring) !important;
+    outline-offset: 2px !important;
+    border-radius: var(--radius-xs);
+  }
+
+  /* On the dark sidebar the standard ring would not clear 3:1. */
+  .on-inverse :where(a, button, [tabindex]):focus-visible {
+    outline-color: var(--focus-ring-inverse) !important;
+  }
+
+  ::selection {
+    background: rgb(var(--petrol-200));
+    color: rgb(var(--petrol-900));
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--ink-300));
+    border-radius: var(--radius-full);
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--ink-400)); }
+
+  /* Reduced motion: strip transforms and loops, keep opacity so state
+     changes are still perceivable rather than instantaneous jumps. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+
 @tailwind components;
+
+/* =========================================================================
+   COMPONENTS
+   ========================================================================= */
+
+
+  /* ── Utility ────────────────────────────────────────────────────────── */
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    inset-inline-start: -9999px;
+    top: 0;
+    z-index: 100;
+    background: var(--surface-inverse);
+    color: var(--text-inverse);
+    padding: var(--space-3) var(--space-5);
+    border-end-end-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--text-base);
+  }
+  .skip-link:focus { inset-inline-start: 0; }
+
+  /* Numeric columns: money, quantities, counts. */
+  .tnum { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+  /* Identifiers that are read character-by-character — SKUs, invoice
+     numbers, ICE, tooth codes. Monospace makes transcription errors
+     visible, which proportional type hides. */
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Buttons ────────────────────────────────────────────────────────── */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 0.5rem 0.875rem;
+    min-height: 2.25rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: var(--text-base);
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    transition:
+      background-color var(--dur-1) var(--ease-out),
+      border-color var(--dur-1) var(--ease-out),
+      color var(--dur-1) var(--ease-out),
+      box-shadow var(--dur-2) var(--ease-out),
+      transform var(--dur-1) var(--ease-out);
+  }
+
+  /* 1px is the whole gesture. The old `active:scale-95` was a consumer-app
+     flourish; a 1px depress reads as a physical button without the bounce. */
+  .btn:not(:disabled):active { transform: translateY(1px); }
+
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .btn > svg,
+  .btn > .material-icons { flex-shrink: 0; }
+  .btn > .material-icons { font-size: 18px; }
+
+  .btn-primary {
+    background: var(--action);
+    color: var(--text-inverse);
+    border-color: var(--action);
+    box-shadow: var(--shadow-xs);
+  }
+  .btn-primary:not(:disabled):hover {
+    background: var(--action-hover);
+    border-color: var(--action-hover);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-primary:not(:disabled):active {
+    background: var(--action-active);
+    border-color: var(--action-active);
+    box-shadow: none;
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--action-text);
+    border-color: var(--border);
+    box-shadow: var(--shadow-xs);
+  }
+  .btn-secondary:not(:disabled):hover {
+    background: var(--action-tint);
+    border-color: var(--action-border);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border-color: transparent;
+  }
+  .btn-ghost:not(:disabled):hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  .btn-danger {
+    background: var(--danger);
+    color: var(--text-inverse);
+    border-color: var(--danger);
+    box-shadow: var(--shadow-xs);
+  }
+  .btn-danger:not(:disabled):hover {
+    background: var(--danger-hover);
+    border-color: var(--danger-hover);
+  }
+
+  /* Destructive action that is not the primary action on the screen —
+     reads as quiet until hovered, so it is hard to hit by accident. */
+  .btn-danger-ghost {
+    background: transparent;
+    color: rgb(var(--critical-600));
+    border-color: transparent;
+  }
+  .btn-danger-ghost:not(:disabled):hover {
+    background: var(--danger-tint);
+    color: rgb(var(--critical-700));
+  }
+
+  .btn-sm {
+    padding: 0.3125rem 0.625rem;
+    min-height: 1.875rem;
+    font-size: var(--text-sm);
+    border-radius: var(--radius-sm);
+  }
+  .btn-lg {
+    padding: 0.6875rem 1.25rem;
+    min-height: 2.75rem;
+    font-size: var(--text-md);
+  }
+
+  /* Icon-only. 44px hit area via a transparent inset so the button can look
+     small while still meeting the touch-target minimum (WCAG 2.5.5). */
+  .btn-icon {
+    padding: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    position: relative;
+  }
+  .btn-icon::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 44px; height: 44px;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ── Surfaces ───────────────────────────────────────────────────────── */
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Only for cards that are themselves a control (navigate on click). A
+     static card that lifts on hover promises an interaction it does not
+     have. */
+  .card-interactive {
+    cursor: pointer;
+    transition:
+      box-shadow var(--dur-2) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out),
+      transform var(--dur-2) var(--ease-out);
+  }
+  .card-interactive:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border);
+    transform: translateY(-2px);
+  }
+  .card-interactive:active { transform: translateY(0); }
+
+  .card-pad { padding: var(--space-5); }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  /* ── Page header ────────────────────────────────────────────────────── */
+
+  .page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .page-title {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    letter-spacing: -0.021em;
+    color: var(--text);
+  }
+  .page-sub {
+    margin-top: var(--space-1);
+    font-size: var(--text-base);
+    color: var(--text-muted);
+    max-width: 62ch;
+  }
+  .page-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+
+  /* ── Status pills ───────────────────────────────────────────────────── */
+
+  /* One shape for every status in the product. The dot is not decoration:
+     it is the redundant non-colour encoding required by WCAG 1.4.1, and it
+     is what lets a user scan a status column by shape at a glance. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.1875rem 0.5rem 0.1875rem 0.4375rem;
+    border-radius: var(--radius-xs);
+    font-size: var(--text-xs);
+    font-weight: 650;
+    line-height: 1.35;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .pill::before {
+    content: '';
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: var(--radius-full);
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .pill-nodot::before { display: none; }
+  .pill-round { border-radius: var(--radius-full); padding-inline: 0.625rem 0.6875rem; }
+
+  .pill-active    { background: var(--status-active-tint);    color: var(--status-active-text);    border-color: rgb(var(--petrol-200) / 0.7); }
+  .pill-done      { background: var(--status-done-tint);      color: var(--status-done-text);      border-color: rgb(var(--positive-200) / 0.7); }
+  .pill-attention { background: var(--status-attention-tint); color: var(--status-attention-text); border-color: rgb(var(--caution-200) / 0.7); }
+  .pill-critical  { background: var(--status-critical-tint);  color: var(--status-critical-text);  border-color: rgb(var(--critical-200) / 0.7); }
+  .pill-idle      { background: var(--status-idle-tint);      color: var(--status-idle-text);      border-color: rgb(var(--ink-200) / 0.7); }
+
+  /* ── Forms ──────────────────────────────────────────────────────────── */
+
+  .field { display: flex; flex-direction: column; gap: 0.375rem; }
+
+  .label {
+    font-size: var(--text-xs);
+    font-weight: 650;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+  }
+  /* Required is marked on the label, not by absence of "(optional)" — a
+     form where the user has to infer which fields are required is a form
+     that produces bad data. */
+  .label-required::after {
+    content: '*';
+    color: rgb(var(--critical-600));
+    margin-inline-start: 0.1875rem;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    width: 100%;
+    padding: 0.5rem 0.6875rem;
+    min-height: 2.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: var(--text-base);
+    color: var(--text);
+    transition:
+      border-color var(--dur-1) var(--ease-out),
+      box-shadow var(--dur-1) var(--ease-out),
+      background-color var(--dur-1) var(--ease-out);
+  }
+  .input::placeholder,
+  .textarea::placeholder { color: var(--text-muted); }
+
+  .input:hover:not(:disabled),
+  .select:hover:not(:disabled),
+  .textarea:hover:not(:disabled) { border-color: var(--border-strong); }
+
+  /* The 3px tinted halo is the same shape as the focus ring but softer —
+     it marks the *edited* field, while the outline marks the *keyboard*
+     position. Both can be true at once. */
+  .input:focus,
+  .select:focus,
+  .textarea:focus {
+    outline: none;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px rgb(var(--petrol-500) / 0.15);
+  }
+
+  .input:disabled,
+  .select:disabled,
+  .textarea:disabled {
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+
+  .textarea { min-height: 5rem; resize: vertical; line-height: var(--leading-snug); }
+
+  .select {
+    appearance: none;
+    padding-inline-end: 2rem;
+    /* Chevron drawn in ink-400 to match .icon; inlined so it needs no
+       network request and inherits no icon font. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237d8e93' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    cursor: pointer;
+  }
+  [dir='rtl'] .select { background-position: left 0.625rem center; }
+
+  .input-invalid,
+  .input.ng-invalid.ng-touched,
+  .select.ng-invalid.ng-touched,
+  .textarea.ng-invalid.ng-touched {
+    border-color: rgb(var(--critical-500));
+  }
+  .input-invalid:focus,
+  .input.ng-invalid.ng-touched:focus {
+    border-color: rgb(var(--critical-600));
+    box-shadow: 0 0 0 3px rgb(var(--critical-500) / 0.15);
+  }
+
+  .hint { font-size: var(--text-xs); color: var(--text-muted); }
+
+  .error-text {
+    display: flex;
+    align-items: center;
+    gap: 0.3125rem;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: rgb(var(--critical-700));
+  }
+
+  /* Search field with a leading icon slot. */
+  .search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+  }
+  .search > .input { padding-inline-start: 2.25rem; }
+  .search > svg,
+  .search > .material-icons {
+    position: absolute;
+    inset-inline-start: 0.6875rem;
+    color: var(--text-subtle);
+    pointer-events: none;
+    font-size: 18px;
+    width: 18px; height: 18px;
+  }
+
+  /* ── Tables ─────────────────────────────────────────────────────────── */
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .table-scroll { overflow-x: auto; }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: start;
+    font-size: var(--text-sm);
+  }
+
+  .data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface-sunken);
+    padding: 0.625rem var(--space-4);
+    text-align: start;
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted-on-tint);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table tbody td {
+    padding: 0.6875rem var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text);
+    vertical-align: middle;
+  }
+  .data-table tbody tr:last-child td { border-bottom: 0; }
+
+  .data-table tbody tr {
+    transition: background-color var(--dur-1) var(--ease-out);
+  }
+  .data-table tbody tr:hover { background: var(--surface-hover); }
+
+  .row-clickable { cursor: pointer; }
+  /* An inset bar rather than a left border, so the row does not shift by
+     1px on hover the way a border-left would. */
+  .row-clickable:hover { box-shadow: inset 3px 0 0 var(--action); }
+  [dir='rtl'] .row-clickable:hover { box-shadow: inset -3px 0 0 var(--action); }
+
+  /* Money and counts right-align so magnitudes compare down the column. */
+  .cell-num { text-align: end; font-variant-numeric: tabular-nums; }
+  .cell-actions { text-align: end; white-space: nowrap; }
+
+  /* ── Tabs & segmented control ───────────────────────────────────────── */
+
+  .tabs {
+    display: flex;
+    gap: var(--space-1);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    position: relative;
+    padding: 0.625rem var(--space-3);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color var(--dur-1) var(--ease-out);
+  }
+  .tab::after {
+    content: '';
+    position: absolute;
+    inset-inline: var(--space-2);
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: var(--action);
+    /* Scale from the centre rather than fading: the underline reads as one
+       object moving between tabs, not two objects cross-dissolving. */
+    transform: scaleX(0);
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected='true'],
+  .tab.is-active { color: var(--action-text); }
+  .tab[aria-selected='true']::after,
+  .tab.is-active::after { transform: scaleX(1); }
+
+  .seg {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-md);
+  }
+  .seg-item {
+    padding: 0.3125rem 0.75rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-size: var(--text-sm);
+    font-weight: 650;
+    color: var(--text-muted-on-tint);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-2) var(--ease-out),
+      color var(--dur-1) var(--ease-out),
+      box-shadow var(--dur-2) var(--ease-out);
+  }
+  .seg-item:hover { color: var(--text); }
+  .seg-item[aria-pressed='true'],
+  .seg-item.is-active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* ── Navigation (dark sidebar) ──────────────────────────────────────── */
+
+  .nav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 0.5rem var(--space-3);
+    min-height: 2.25rem;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: rgb(var(--petrol-200));
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-2) var(--ease-out),
+      color var(--dur-1) var(--ease-out);
+  }
+  .nav-link:hover {
+    background: rgb(var(--white) / 0.07);
+    color: rgb(var(--white));
+  }
+  .nav-link-active {
+    background: rgb(var(--white) / 0.12);
+    color: rgb(var(--white));
+  }
+  /* The rail marks the current section. It grows from the centre so
+     navigating between items reads as the marker moving, not blinking. */
+  .nav-link-active::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
+    height: 60%;
+    width: 3px;
+    border-radius: var(--radius-full);
+    background: rgb(var(--petrol-300));
+    transform: translateY(-50%);
+    animation: nav-rail var(--dur-3) var(--ease-out) both;
+  }
+  @keyframes nav-rail {
+    from { transform: translateY(-50%) scaleY(0); opacity: 0; }
+    to   { transform: translateY(-50%) scaleY(1); opacity: 1; }
+  }
+  .nav-link svg { flex-shrink: 0; pointer-events: none; }
+
+  .nav-section {
+    padding: 0 var(--space-3);
+    margin: var(--space-5) 0 var(--space-2);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(var(--petrol-300));
+  }
+
+  /* ── Empty / loading states ─────────────────────────────────────────── */
+
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-12) var(--space-6);
+    text-align: center;
+  }
+  .empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
+    color: var(--text-subtle);
+  }
+  .empty-title { font-size: var(--text-md); font-weight: 700; color: var(--text); }
+  .empty-text  { font-size: var(--text-base); color: var(--text-muted); max-width: 42ch; }
+
+  /* Skeletons mirror the shape of the content they stand in for, so the
+     layout does not jump when real data lands. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--white) / 0.65),
+      transparent
+    );
+    animation: skeleton-sweep 1.4s var(--ease-in-out) infinite;
+  }
+  @keyframes skeleton-sweep { 100% { transform: translateX(100%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after { animation: none; }
+  }
+  .skeleton-text { height: 0.75rem; border-radius: var(--radius-full); }
+
+  /* ── Misc ───────────────────────────────────────────────────────────── */
+
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.0625rem 0.3125rem;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-xs);
+    background: var(--surface);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .divider { height: 1px; background: var(--border-subtle); border: 0; }
+
+  /* Icon in its resting state. Pairs with `.btn-icon` for controls; use
+     alone for decorative or leading icons. */
+  .icon { color: var(--text-subtle); flex-shrink: 0; }
+
+  /* ── Motion helpers ─────────────────────────────────────────────────── */
+
+  /* Applied to a page root or a list. `.stagger` walks its own children so
+     rows arrive in reading order — it makes a table feel like it was
+     populated rather than repainted. Capped at 8 so a 200-row table does
+     not spend two seconds animating. */
+  .anim-rise { animation: rise var(--dur-3) var(--ease-out) both; }
+  .anim-fade { animation: fade var(--dur-2) var(--ease-out) both; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .stagger > * { animation: rise var(--dur-3) var(--ease-out) both; }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 40ms; }
+  .stagger > *:nth-child(3) { animation-delay: 80ms; }
+  .stagger > *:nth-child(4) { animation-delay: 120ms; }
+  .stagger > *:nth-child(5) { animation-delay: 160ms; }
+  .stagger > *:nth-child(6) { animation-delay: 200ms; }
+  .stagger > *:nth-child(7) { animation-delay: 240ms; }
+  .stagger > *:nth-child(n + 8) { animation-delay: 280ms; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .anim-rise, .anim-fade, .stagger > * { animation: none; }
+  }
+
+
+/* =========================================================================
+   PRINT
+   The dossier's Print button opens the browser dialog on the current page,
+   so app chrome has to drop out and leave the clinical content behind.
+   ========================================================================= */
+@media print {
+  .no-print { display: none !important; }
+
+  body { background: #fff; }
+
+  .card, .table-wrap {
+    box-shadow: none !important;
+    border-color: #ccc !important;
+    break-inside: avoid;
+  }
+  .data-table thead th { position: static; }
+
+  /* Tints do not survive most clinic printers; give status pills a visible
+     outline so the state still reads on paper. */
+  .pill {
+    border: 1px solid #666 !important;
+    background: transparent !important;
+    color: #000 !important;
+  }
+}
+
+/* =========================================================================
+   COMPATIBILITY LAYER
+
+   Aliases for class names that predate the token system, mapped onto the
+   new primitives so unmigrated screens keep rendering correctly while they
+   are converted one at a time. Each entry is a migration to do, not a
+   pattern to copy. Delete an alias once its last consumer is gone.
+   ========================================================================= */
+
+  /* → .card / .card-interactive.
+     Consumers: dashboard, login-page, landing. */
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition:
+      box-shadow var(--dur-2) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out),
+      transform var(--dur-2) var(--ease-out);
+  }
+  .tile-hover:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border);
+    transform: translateY(-2px);
+  }
+
+  /* → .nav-link / .nav-link-active. The sidebar is dark now, so the old
+     light-ground inactive state would be invisible; both map onto the
+     inverse-ground styles defined above. */
+  .nav-link-inactive { color: rgb(var(--petrol-200)); }
+
+  /* → <app-status-pill>. Screens not yet migrated emit
+     `<span class="status-badge" [class]="status.toLowerCase()">`, so the
+     modifiers below mirror the tone mapping in status-pill.component.ts.
+     Keeping these in sync by hand is exactly the cost this alias exists to
+     retire — migrate the markup and delete the block. */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1875rem 0.5rem;
+    border-radius: var(--radius-xs);
+    font-size: var(--text-xs);
+    font-weight: 650;
+    line-height: 1.35;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    background: var(--status-idle-tint);
+    color: var(--status-idle-text);
+    border-color: rgb(var(--ink-200) / 0.7);
+  }
+  .status-badge.active, .status-badge.sent, .status-badge.scheduled,
+  .status-badge.submitted, .status-badge.confirmed, .status-badge.in-progress,
+  .status-badge.planned, .status-badge.proposed, .status-badge.open {
+    background: var(--status-active-tint);
+    color: var(--status-active-text);
+    border-color: rgb(var(--petrol-200) / 0.7);
+  }
+  .status-badge.paid, .status-badge.completed, .status-badge.accepted,
+  .status-badge.approved, .status-badge.received, .status-badge.validated,
+  .status-badge.finalized, .status-badge.invoiced, .status-badge.delivered {
+    background: var(--status-done-tint);
+    color: var(--status-done-text);
+    border-color: rgb(var(--positive-200) / 0.7);
+  }
+  .status-badge.pending, .status-badge.partially-paid, .status-badge.partially-received,
+  .status-badge.on-hold, .status-badge.no-show, .status-badge.expired,
+  .status-badge.refunded, .status-badge.awaiting {
+    background: var(--status-attention-tint);
+    color: var(--status-attention-text);
+    border-color: rgb(var(--caution-200) / 0.7);
+  }
+  .status-badge.overdue, .status-badge.rejected, .status-badge.failed,
+  .status-badge.out-of-stock {
+    background: var(--status-critical-tint);
+    color: var(--status-critical-text);
+    border-color: rgb(var(--critical-200) / 0.7);
+  }
+
+  /* → .btn.btn-ghost.btn-icon. Icon-only control at a 44px hit area. */
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    color: var(--text-subtle);
+    cursor: pointer;
+    transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+  }
+  .icon-btn:hover { background: var(--surface-hover); color: var(--text); }
+  .icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .icon-btn .material-icons { font-size: 18px; }
+
+  /* Sidebar geometry. The width transition is the reason the collapse
+     toggle previously animated a chevron while the rail never moved:
+     app.css was not in the build. */
+  .sidebar {
+    width: 248px;
+    transition: width var(--dur-4) var(--ease-in-out);
+  }
+  .sidebar-collapsed { width: 72px; }
+
+/* Utilities last: a screen must always be able to override a component
+   class with a utility (`.btn-primary w-full`). */
 @tailwind utilities;
-
-:root {
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --secondary: #64748b;
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --border-color: #e2e8f0;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --font-main: 'Manrope', sans-serif;
-  --font-serif: 'Cormorant Garamond', serif;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--font-main);
-  background-color: var(--bg-main);
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-main);
-  color: var(--text-primary);
-}
-
-.serif {
-  font-family: var(--font-serif);
-}
-
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}

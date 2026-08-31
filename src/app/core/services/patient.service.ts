@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Patient, MedicalHistory, TreatmentPlan, Appointment, ClinicalNote, PatientDocument, SimulationMetadata } from '../models/patient.model';
+import { Patient } from '../models/patient.model';
 import { PatientApiService } from './patient-api.service';
-import { finalize, tap, Observable } from 'rxjs';
+import { finalize, tap, of, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -13,11 +13,40 @@ export class PatientService {
   private patientsSignal = signal<Patient[]>([]);
   private currentPatientSignal = signal<Patient | null>(null);
   private loadingSignal = signal<boolean>(false);
-  
+  private errorSignal = signal<string | null>(null);
+
   // Public selectors
   patients = computed(() => this.patientsSignal());
   currentPatient = computed(() => this.currentPatientSignal());
   loading = computed(() => this.loadingSignal());
+  error = computed(() => this.errorSignal());
+
+  /**
+   * Display names by patient id.
+   *
+   * Several endpoints return a bare `patientId` and no name — `InvoiceResponse`
+   * is the one that caused trouble, because the invoice list and the invoice
+   * PDF both rendered a `patientName` field that the server has never sent.
+   * Resolving the name here keeps that join in one place and makes it obvious
+   * that it *is* a join, rather than a field somebody assumed was on the wire.
+   *
+   * The better long-term fix is server-side: `scheduling` and `stock` already
+   * enrich their responses with `PatientSummary` through the `PatientLookup`
+   * port, and `billing` should do the same. Until then this covers it without
+   * an extra request, since the patient list is already loaded.
+   */
+  private patientNames = computed(() => {
+    const byId = new Map<string, string>();
+    for (const p of this.patientsSignal()) {
+      byId.set(p.id, `${p.firstName} ${p.lastName}`.trim());
+    }
+    return byId;
+  });
+
+  /** Display name for `patientId`, or `undefined` if not loaded yet. */
+  nameFor(patientId: string | undefined): string | undefined {
+    return patientId ? this.patientNames().get(patientId) : undefined;
+  }
 
   constructor() {
     this.refreshPatients();
@@ -25,65 +54,42 @@ export class PatientService {
 
   refreshPatients(): void {
     this.loadingSignal.set(true);
+    this.errorSignal.set(null);
     this.api.getPatients()
       .pipe(finalize(() => this.loadingSignal.set(false)))
       .subscribe({
         next: (patients) => this.patientsSignal.set(patients),
         error: (err) => {
           console.error('Failed to load patients', err);
-          // Fallback to mock data if API fails (for demo purposes)
-          this.loadMockPatients();
+          this.errorSignal.set('Failed to load patients.');
         }
       });
   }
 
-  loadMockPatients() {
-    const mockPatients: Patient[] = [
-      {
-        id: '1',
-        firstName: 'Amine',
-        lastName: 'El Mansouri',
-        dateOfBirth: '1995-03-15',
-        gender: 'M',
-        email: 'amine.m@email.com',
-        phone: '+212 600-000000',
-        address: 'Casablanca, Morocco',
-        cin: 'BK123456',
-        insuranceProvider: 'CNOPS',
-        status: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      {
-        id: '2',
-        firstName: 'Sarah',
-        lastName: 'Johnson',
-        dateOfBirth: '2008-07-22',
-        gender: 'F',
-        email: 'sarah.j@email.com',
-        phone: '+1 555-0123',
-        address: 'New York, USA',
-        status: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ];
-    this.patientsSignal.set(mockPatients);
-  }
+  /**
+   * Resolves the patient for `id` and sets it as current, returning an
+   * Observable so callers can drive dependent loads (chart, billing,
+   * treatments) off the *resolved* patient rather than reading the
+   * `currentPatient` signal synchronously right after calling this — reading
+   * it synchronously raced ahead of the HTTP fetch and could load one
+   * patient's clinical data under another patient's identity.
+   */
+  setCurrentPatient(id: string): Observable<Patient> {
+    const cached = this.patientsSignal().find(p => p.id === id);
+    const source = cached ? of(cached) : this.api.getPatient(id);
 
-  setCurrentPatient(id: string): void {
-    const patient = this.patientsSignal().find(p => p.id === id);
-    if (patient) {
-      this.currentPatientSignal.set(patient);
-    } else {
-      this.loadingSignal.set(true);
-      this.api.getPatient(id)
-        .pipe(finalize(() => this.loadingSignal.set(false)))
-        .subscribe({
-          next: (p) => this.currentPatientSignal.set(p),
-          error: () => this.currentPatientSignal.set(null)
-        });
-    }
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    return source.pipe(
+      tap({
+        next: (patient) => this.currentPatientSignal.set(patient),
+        error: () => {
+          this.currentPatientSignal.set(null);
+          this.errorSignal.set('Failed to load patient.');
+        }
+      }),
+      finalize(() => this.loadingSignal.set(false))
+    );
   }
 
   addPatient(patient: Partial<Patient>): Observable<Patient> {
@@ -122,79 +128,5 @@ export class PatientService {
       }),
       finalize(() => this.loadingSignal.set(false))
     );
-  }
-
-  // Mock methods for dossier data (stays for now)
-  getMedicalHistory(patientId: string): MedicalHistory {
-    return {
-      patientId,
-      generalHealth: 'Good',
-      allergies: ['Penicillin'],
-      medications: [],
-      previousOrthoTreatment: false,
-      chiefComplaint: 'Crowding in upper jaw'
-    };
-  }
-
-  getTreatmentPlan(patientId: string): TreatmentPlan {
-    return {
-      id: 'tp1',
-      patientId,
-      goals: ['Align upper and lower teeth', 'Correct overbite'],
-      applianceType: 'Invisalign',
-      strippingRequired: true,
-      estimatedDurationMonths: 18,
-      status: 'ACTIVE',
-      version: 1
-    };
-  }
-
-  getAppointments(patientId: string): Appointment[] {
-    return [
-      {
-        id: 'a1',
-        patientId,
-        dateTime: new Date().toISOString(),
-        type: 'Checkup',
-        status: 'SCHEDULED',
-        applianceStep: 5
-      }
-    ];
-  }
-
-  getClinicalNotes(patientId: string): ClinicalNote[] {
-    return [
-      {
-        id: 'n1',
-        patientId,
-        authorId: 'dr1',
-        content: 'Patient showing good compliance with aligners.',
-        createdAt: new Date().toISOString(),
-        type: 'PROGRESS'
-      }
-    ];
-  }
-
-  getDocuments(patientId: string): PatientDocument[] {
-    return [
-      {
-        id: 'd1',
-        patientId,
-        name: 'Panoramic X-Ray',
-        type: 'XRAY',
-        url: 'assets/mock/xray.jpg',
-        createdAt: new Date().toISOString()
-      }
-    ];
-  }
-
-  getSimulationMetadata(patientId: string): SimulationMetadata {
-    return {
-      id: 's1',
-      patientId,
-      externalLink: 'https://sim-viewer.orthoflow.com/p/1',
-      stepCount: 24,
-      lastUpdated: new Date().toISOString()
-    };
   }
 }

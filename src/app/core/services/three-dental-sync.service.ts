@@ -1,5 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { ToothState, ToothStatus } from '../models/patient.model';
+import { DentalChartService } from './dental-chart.service';
 
 export type ViewType = 'top' | 'frontal' | 'internal' | 'roots';
 
@@ -17,6 +18,8 @@ export interface AuditEntry {
   providedIn: 'root',
 })
 export class ThreeDentalSyncService {
+  private dentalChartService = inject(DentalChartService);
+
   // We keep a separate status map for each view, and a shared one where applicable.
   // By default, Top, Frontal, Internal views are kept synchronized, whereas Roots is isolated.
   private teethStates = signal<Record<ViewType, Record<string, ToothState>>>({
@@ -36,6 +39,9 @@ export class ThreeDentalSyncService {
   getViewTeethState(view: ViewType) {
     return computed(() => this.teethStates()[view]);
   }
+
+  // Get frontal teeth for overview
+  getFrontalTeethForOverview = computed(() => this.teethStates().frontal);
 
   // Get full state signal
   getAllTeethStates() {
@@ -61,12 +67,15 @@ export class ThreeDentalSyncService {
       }
     }
 
-    // Default: initialize all views with base teeth
+    // Default: initialize all views with base teeth or service data
+    const chartData = this.dentalChartService.getAllTeeth();
+    const sourceData = Object.keys(chartData).length > 0 ? chartData : baseTeeth;
+
     const initial: Record<ViewType, Record<string, ToothState>> = {
-      top: JSON.parse(JSON.stringify(baseTeeth)),
-      frontal: JSON.parse(JSON.stringify(baseTeeth)),
-      internal: JSON.parse(JSON.stringify(baseTeeth)),
-      roots: JSON.parse(JSON.stringify(baseTeeth)),
+      top: JSON.parse(JSON.stringify(sourceData)),
+      frontal: JSON.parse(JSON.stringify(sourceData)),
+      internal: JSON.parse(JSON.stringify(sourceData)),
+      roots: JSON.parse(JSON.stringify(sourceData)),
     };
     this.teethStates.set(initial);
     this.auditLog.set([]);
@@ -142,6 +151,9 @@ export class ThreeDentalSyncService {
     // Update state signals
     this.teethStates.set(updated);
     this.auditLog.update((l) => [...logs, ...l]);
+
+    // Sync with main chart service
+    this.dentalChartService.updateTooth(toothId, { status, notes }, `3d_${sourceView}`);
 
     // Save to storage
     this.saveToStorage(patientId);

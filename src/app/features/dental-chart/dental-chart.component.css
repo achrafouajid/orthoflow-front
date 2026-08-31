@@ -21,7 +21,7 @@
   justify-content: space-between;
   width: 100%;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid rgb(var(--ink-100));
 }
 
 .header-left {
@@ -43,13 +43,13 @@
 }
 
 .chart-type-badge.adult {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: rgb(var(--petrol-50));
+  color: rgb(var(--petrol-600));
 }
 
 .chart-type-badge.child {
-  background: #fff7ed;
-  color: #c2410c;
+  background: rgb(var(--caution-50));
+  color: rgb(var(--caution-800));
 }
 
 .chart-type-badge .material-icons {
@@ -66,26 +66,26 @@
 
 .tooth-num {
   font-weight: 800;
-  background: #f1f5f9;
+  background: rgb(var(--ink-100));
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
-  color: #475569;
+  color: rgb(var(--ink-600));
 }
 
 .tooth-name {
   font-weight: 600;
-  color: #1e293b;
+  color: rgb(var(--ink-900));
 }
 
 .tooth-status-label {
   font-weight: 600;
   font-size: 0.75rem;
   padding-left: 0.5rem;
-  border-left: 2px solid #e2e8f0;
+  border-left: 2px solid rgb(var(--ink-200));
 }
 
 .placeholderText {
-  color: #94a3b8;
+  color: rgb(var(--ink-500));
   font-style: italic;
 }
 
@@ -95,10 +95,14 @@
 }
 
 .btn-icon-sm {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
+  background: rgb(var(--ink-50));
+  border: 1px solid rgb(var(--ink-200));
+  color: rgb(var(--ink-500));
   padding: 0.35rem;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -106,9 +110,19 @@
 }
 
 .btn-icon-sm:hover {
-  background: #f1f5f9;
-  color: #4f46e5;
-  border-color: #4f46e5;
+  background: rgb(var(--ink-100));
+  color: rgb(var(--petrol-600));
+  border-color: rgb(var(--petrol-600));
+}
+
+.btn-icon-sm:focus-visible,
+.close-btn:focus-visible,
+.btn-export-sm:focus-visible,
+.report-toggle:focus-visible,
+.status-option:focus-visible,
+.btn-reset:focus-visible {
+  outline: 2px solid rgb(var(--petrol-600));
+  outline-offset: 2px;
 }
 
 .btn-icon-sm .material-icons {
@@ -129,6 +143,15 @@
 
 .svg-container svg path {
   transition: all 0.2s ease;
+}
+
+.svg-container svg path:focus,
+.svg-container svg path:focus-visible {
+  outline: 2px solid rgb(var(--petrol-900));
+  outline-offset: 1px;
+  stroke: rgb(var(--petrol-900)) !important;
+  stroke-width: 2px !important;
+  filter: drop-shadow(0 0 3px rgba(3,4,94,0.6));
 }
 
 /* Status selection popup */
@@ -174,25 +197,42 @@
   gap: 0.75rem;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: rgb(var(--ink-900));
 }
 
 .menu-title .material-icons {
-  color: #4f46e5;
+  color: rgb(var(--petrol-600));
 }
 
 .close-btn {
-  background: #f1f5f9;
+  background: rgb(var(--ink-100));
   border: none;
   border-radius: 50%;
   padding: 0.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  color: #64748b;
+  color: rgb(var(--ink-500));
   display: flex;
 }
 
 .status-sections {
   margin-bottom: 1.5rem;
+}
+
+.status-group + .status-group {
+  margin-top: 1rem;
+}
+
+.status-group-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgb(var(--ink-500));
 }
 
 .status-grid {
@@ -206,27 +246,27 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgb(var(--ink-200));
   border-radius: 10px;
   background: white;
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #475569;
+  color: rgb(var(--ink-600));
   transition: all 0.2s;
-  text-align: left;
+  text-align: start;
 }
 
 .status-option:hover {
-  border-color: #4f46e5;
-  background: #f5f3ff;
+  border-color: rgb(var(--petrol-600));
+  background: rgb(var(--petrol-50));
   transform: translateY(-1px);
 }
 
 .status-option.active {
-  border-color: #4f46e5;
-  background: #eef2ff;
-  color: #4f46e5;
+  border-color: rgb(var(--petrol-600));
+  background: rgb(var(--petrol-50));
+  color: rgb(var(--petrol-600));
   box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
 }
 
@@ -238,17 +278,17 @@
 }
 
 .menu-footer {
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid rgb(var(--ink-100));
   padding-top: 1rem;
 }
 
 .btn-reset {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgb(var(--ink-200));
   border-radius: 10px;
   background: white;
-  color: #64748b;
+  color: rgb(var(--ink-500));
   font-weight: 700;
   font-size: 0.8rem;
   cursor: pointer;
@@ -256,9 +296,9 @@
 }
 
 .btn-reset:hover {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #94a3b8;
+  background: rgb(var(--ink-50));
+  color: rgb(var(--ink-900));
+  border-color: rgb(var(--ink-500));
 }
 
 .chart-footer {
@@ -271,9 +311,9 @@
   flex-wrap: wrap;
   gap: 0.75rem 1rem;
   padding: 1rem;
-  background: #f8fafc;
+  background: rgb(var(--ink-50));
   border-radius: 12px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid rgb(var(--ink-100));
 }
 
 .legend-item {
@@ -281,7 +321,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.7rem;
-  color: #64748b;
+  color: rgb(var(--ink-500));
   font-weight: 600;
 }
 
@@ -291,11 +331,19 @@
   border-radius: 50%;
 }
 
+/* Planned work has no fill of its own — see PLANNED_PAINT in
+   core/clinical/tooth-status.ts — so its legend swatch is an outline
+   rather than a solid dot, matching how it actually reads on the chart. */
+.legend-dot-planned {
+  background: transparent;
+  border: 1.5px dashed;
+}
+
 /* Note Section in Status Menu */
 .note-section {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid rgb(var(--ink-100));
 }
 
 .note-label {
@@ -304,32 +352,32 @@
   gap: 0.5rem;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #475569;
+  color: rgb(var(--ink-600));
   margin-bottom: 0.75rem;
 }
 
 .note-label .material-icons {
   font-size: 1.1rem;
-  color: #4f46e5;
+  color: rgb(var(--petrol-600));
 }
 
 .note-textarea {
   width: 100%;
   min-height: 80px;
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgb(var(--ink-200));
   border-radius: 12px;
-  background: #f8fafc;
+  background: rgb(var(--ink-50));
   font-size: 0.85rem;
   font-family: inherit;
-  color: #1e293b;
+  color: rgb(var(--ink-900));
   resize: vertical;
   transition: all 0.2s;
 }
 
 .note-textarea:focus {
   outline: none;
-  border-color: #4f46e5;
+  border-color: rgb(var(--petrol-600));
   background: white;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
@@ -337,8 +385,8 @@
 /* Report Section */
 .report-container {
   width: 100%;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
+  background: rgb(var(--ink-50));
+  border: 1px solid rgb(var(--ink-100));
   border-radius: 16px;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -346,7 +394,7 @@
 
 .report-container.open {
   background: white;
-  border-color: #e2e8f0;
+  border-color: rgb(var(--ink-200));
   box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
 }
 
@@ -373,17 +421,17 @@
 }
 
 .toggle-left .material-icons {
-  color: #4f46e5;
+  color: rgb(var(--petrol-600));
 }
 
 .report-title {
   font-weight: 700;
-  color: #0f172a;
+  color: rgb(var(--ink-900));
   font-size: 0.9rem;
 }
 
 .note-count {
-  background: #4f46e5;
+  background: rgb(var(--petrol-600));
   color: white;
   font-size: 0.7rem;
   font-weight: 800;
@@ -399,9 +447,13 @@
 
 .btn-export-sm {
   background: white;
-  border: 1px solid #e2e8f0;
-  color: #4f46e5;
+  border: 1px solid rgb(var(--ink-200));
+  color: rgb(var(--petrol-600));
   padding: 0.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -409,8 +461,8 @@
 }
 
 .btn-export-sm:hover {
-  background: #eef2ff;
-  border-color: #4f46e5;
+  background: rgb(var(--petrol-50));
+  border-color: rgb(var(--petrol-600));
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
 }
@@ -420,7 +472,7 @@
 }
 
 .toggle-arrow {
-  color: #64748b;
+  color: rgb(var(--ink-500));
   font-size: 1.25rem;
 }
 
@@ -442,14 +494,14 @@
 
 .report-item {
   padding: 1rem;
-  background: #f8fafc;
+  background: rgb(var(--ink-50));
   border-radius: 12px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid rgb(var(--ink-100));
   transition: all 0.2s;
 }
 
 .report-item:hover {
-  border-color: #4f46e5;
+  border-color: rgb(var(--petrol-600));
   background: white;
   transform: translateX(4px);
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
@@ -464,13 +516,13 @@
 
 .tooth-badge {
   font-weight: 800;
-  color: #4f46e5;
+  color: rgb(var(--petrol-600));
   font-size: 0.85rem;
 }
 
 .tooth-name-sm {
   font-weight: 700;
-  color: #1e293b;
+  color: rgb(var(--ink-900));
   font-size: 0.85rem;
 }
 
@@ -484,14 +536,14 @@
 .status-text-sm {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #64748b;
+  color: rgb(var(--ink-500));
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }
 
 .item-note {
   font-size: 0.85rem;
-  color: #475569;
+  color: rgb(var(--ink-600));
   line-height: 1.5;
   white-space: pre-wrap;
 }
@@ -501,7 +553,7 @@
   flex-direction: column;
   align-items: center;
   padding: 2rem 0;
-  color: #94a3b8;
+  color: rgb(var(--ink-500));
   gap: 0.5rem;
 }
 

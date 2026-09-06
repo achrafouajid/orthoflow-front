@@ -151,7 +151,9 @@ export class ToothCloseupViewerComponent implements OnChanges, OnDestroy {
   constructor(private ngZone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnChanges(changes: SimpleChanges) {
-    if (!changes['fdi']) return;
+    // `mode` swaps the shell material and adds/removes the canal, so it needs
+    // a rebuild just as much as `fdi` does.
+    if (!changes['fdi'] && !changes['mode']) return;
     this.teardown();
     if (this.hasModel) {
       this.loading = true;

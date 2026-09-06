@@ -455,7 +455,10 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                 }
                 @case ('treatments') {
                   <div class="treatments-layout-3d">
-                    <!-- Left panel: Interactive 3D Multi-View Dental Canvas -->
+                    <!-- Interactive 3D canvas. The treatment tracker is
+                         projected into the canvas' own side panel, so that
+                         panel shows the patient's treatments while no tooth
+                         is selected instead of sitting empty. -->
                     <div class="chart-sidebar-3d">
                       @if (dentalChartState(); as chart) {
                         <app-dental-3d-canvas
@@ -463,12 +466,8 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                           [initialTeeth]="chart.teeth"
                           (toothSelected)="onToothSelected3D($event)"
                           (openAssignModal)="openAssignModalFrom3D($event)"
-                        />
-                      }
-                    </div>
-
-                    <!-- Right panel: Patient Treatments Tracker -->
-                    <div class="treatments-tracker">
+                        >
+                    <div class="treatments-tracker" canvasIdlePanel>
                       <div class="tracker-header">
                         <h2>Patient Clinical Treatments</h2>
                         <button type="button" class="btn btn-primary" (click)="openAssignModal()">
@@ -528,6 +527,9 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                           </div>
                         }
                       </div>
+                    </div>
+                        </app-dental-3d-canvas>
+                      }
                     </div>
                   </div>
                 }

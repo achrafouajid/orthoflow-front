@@ -250,9 +250,15 @@ import { AuthService } from '../../core/services/auth.service';
               </button>
             </div>
           } @else {
-            <div class="panel-empty-state">
-              <span class="material-icons large text-slate-300">touch_app</span>
-              <p>Click any tooth inside a 3D viewport to inspect properties or update status.</p>
+            <!-- Idle: the panel is the patient's working surface, not a
+                 placeholder. The host projects what belongs here (the
+                 treatment list); the hint stays as a one-line affordance. -->
+            <div class="panel-idle">
+              <p class="panel-idle-hint">
+                <span class="material-icons" aria-hidden="true">touch_app</span>
+                Cliquez une dent dans la vue 3D pour la détailler.
+              </p>
+              <ng-content select="[canvasIdlePanel]"></ng-content>
             </div>
           }
         </div>

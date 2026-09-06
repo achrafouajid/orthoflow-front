@@ -38,14 +38,14 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
     <div class="viewer-container" #container>
       <div *ngIf="lazy && !isLazyLoaded" class="lazy-overlay" (mouseenter)="loadLazy()" (click)="loadLazy()">
         <span class="material-icons text-3xl text-ortho-sky mb-2">three_d_rotation</span>
-        <span class="text-xs font-semibold text-slate-300">Click or Hover to Load 3D View</span>
+        <span class="text-xs font-semibold text-slate-600">Click or Hover to Load 3D View</span>
       </div>
       <div *ngIf="loading && (!lazy || isLazyLoaded)" class="loading-overlay">
         <div class="spinner"></div>
         <span>Loading 3D Anatomy...</span>
       </div>
       <div *ngIf="!loading && mappingFailed" class="loading-overlay" role="alert">
-        <span class="material-icons text-3xl text-amber-400 mb-2">warning</span>
+        <span class="material-icons text-3xl text-amber-600 mb-2">warning</span>
         <span>3D model could not be mapped to FDI notation; use the 2D chart.</span>
       </div>
       <div class="canvas-wrapper" #canvasHolder></div>
@@ -57,10 +57,13 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
       width: 100%;
       height: 100%;
       min-height: 250px;
-      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      /* White ground. The faint vignette at the edges is deliberate: sound
+         teeth render in near-white enamel (#f8fafc), so on a perfectly flat
+         white field their silhouettes would wash out. */
+      background: radial-gradient(circle at center, #ffffff 0%, #ffffff 55%, #eef1f5 100%);
       border-radius: 12px;
       overflow: hidden;
-      border: 1px solid #334155;
+      border: 1px solid #e2e8f0;
     }
     .canvas-wrapper {
       width: 100%;
@@ -72,7 +75,7 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(15, 23, 42, 0.85);
+      background: rgba(255, 255, 255, 0.9);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -89,7 +92,7 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(15, 23, 42, 0.75);
+      background: rgba(255, 255, 255, 0.82);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -100,12 +103,12 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
       backdrop-filter: blur(2px);
     }
     .lazy-overlay:hover {
-      background: rgba(15, 23, 42, 0.5);
+      background: rgba(255, 255, 255, 0.6);
     }
     .spinner {
       width: 24px;
       height: 24px;
-      border: 2px solid #334155;
+      border: 2px solid #cbd5e1;
       border-top-color: #03045e;
       border-radius: 50%;
       animation: spin 1s linear infinite;

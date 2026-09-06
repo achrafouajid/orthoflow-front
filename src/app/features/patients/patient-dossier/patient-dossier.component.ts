@@ -42,15 +42,15 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
             <span class="status-badge active">{{ 'PATIENTS.DOSSIER.STATUS_' + patient.status | translate }}</span>
           </div>
           <div class="header-actions no-print">
-            <button type="button" class="btn-outline" (click)="onPrint()">
+            <button type="button" class="btn btn-secondary" (click)="onPrint()">
               <span class="material-icons">print</span>
               {{ 'COMMON.PRINT' | translate }}
             </button>
-            <button type="button" class="btn-primary" [routerLink]="['edit']">
+            <button type="button" class="btn btn-primary" [routerLink]="['edit']">
               <span class="material-icons">edit</span>
               {{ 'COMMON.EDIT' | translate }} {{ 'PATIENTS.NAME' | translate }}
             </button>
-            <button type="button" class="btn-danger" (click)="onDelete()">
+            <button type="button" class="btn btn-danger" (click)="onDelete()">
               <span class="material-icons">delete</span>
               {{ 'COMMON.DELETE' | translate }}
             </button>
@@ -174,7 +174,7 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                 <div class="summary-card dental-chart-card">
                   <div class="chart-card-header">
                     <h3>{{ 'DENTAL_CHART.TITLE' | translate }}</h3>
-                    <button type="button" class="btn-sm btn-outline" (click)="showDentalChartFullscreen.set(!showDentalChartFullscreen())">
+                    <button type="button" class="btn btn-secondary btn-sm" (click)="showDentalChartFullscreen.set(!showDentalChartFullscreen())">
                       <span class="material-icons">{{ showDentalChartFullscreen() ? 'close_fullscreen' : 'open_in_full' }}</span>
                     </button>
                   </div>
@@ -220,23 +220,23 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                   <section class="dossier-section">
                     <div class="notes-header">
                       <h2>{{ 'PATIENTS.DOSSIER.MEDICAL_HISTORY' | translate }}</h2>
-                      <button type="button" class="btn-primary btn-sm" (click)="showHistoryForm.set(!showHistoryForm())">
+                      <button type="button" class="btn btn-primary btn-sm" (click)="showHistoryForm.set(!showHistoryForm())">
                         {{ 'COMMON.ADD' | translate }}
                       </button>
                     </div>
 
                     @if (showHistoryForm()) {
                       <div class="inline-form">
-                        <select [(ngModel)]="historyForm.category" class="form-input">
+                        <select [(ngModel)]="historyForm.category" class="select">
                           @for (cat of medicalHistoryCategories; track cat) {
                             <option [value]="cat">{{ cat }}</option>
                           }
                         </select>
-                        <input type="text" [(ngModel)]="historyForm.label" placeholder="Label (e.g. Hypertension)" class="form-input" />
-                        <textarea [(ngModel)]="historyForm.detail" placeholder="Detail (optional)" rows="2" class="form-input"></textarea>
+                        <input type="text" [(ngModel)]="historyForm.label" placeholder="Label (e.g. Hypertension)" class="input" />
+                        <textarea [(ngModel)]="historyForm.detail" placeholder="Detail (optional)" rows="2" class="textarea"></textarea>
                         <div class="inline-form-actions">
-                          <button type="button" class="btn-ghost btn-sm" (click)="showHistoryForm.set(false)">{{ 'COMMON.CANCEL' | translate }}</button>
-                          <button type="button" class="btn-primary btn-sm" [disabled]="!historyForm.label" (click)="submitMedicalHistory()">{{ 'COMMON.SAVE' | translate }}</button>
+                          <button type="button" class="btn btn-ghost btn-sm" (click)="showHistoryForm.set(false)">{{ 'COMMON.CANCEL' | translate }}</button>
+                          <button type="button" class="btn btn-primary btn-sm" [disabled]="!historyForm.label" (click)="submitMedicalHistory()">{{ 'COMMON.SAVE' | translate }}</button>
                         </div>
                       </div>
                     }
@@ -250,14 +250,14 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                               <span class="clinical-item-label">{{ entry.label }}</span>
                               @if (entry.detail) { <p class="clinical-item-detail">{{ entry.detail }}</p> }
                             </div>
-                            <button type="button" class="btn-icon danger" (click)="removeMedicalHistory(entry.id)" title="Delete">
+                            <button type="button" class="btn btn-ghost btn-icon" (click)="removeMedicalHistory(entry.id)" title="Delete">
                               <span class="material-icons text-sm">delete</span>
                             </button>
                           </div>
                         }
                       </div>
                     } @else if (!showHistoryForm()) {
-                      <div class="empty-state">
+                      <div class="empty">
                         <span class="material-icons">medical_services</span>
                         <p>{{ 'PATIENTS.DOSSIER.NO_MEDICAL_HISTORY' | translate }}</p>
                       </div>
@@ -268,30 +268,30 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                   <section class="dossier-section">
                     <div class="notes-header">
                       <h2>{{ 'PATIENTS.DOSSIER.DIAGNOSTICS' | translate }}</h2>
-                      <button type="button" class="btn-primary btn-sm" (click)="openFindingForm('diagnostic')">
+                      <button type="button" class="btn btn-primary btn-sm" (click)="openFindingForm('diagnostic')">
                         {{ 'COMMON.ADD' | translate }}
                       </button>
                     </div>
 
                     @if (showFindingForm() === 'diagnostic') {
                       <div class="inline-form">
-                        <input type="text" [(ngModel)]="findingForm.fdi" placeholder="Tooth FDI (e.g. 26)" maxlength="2" class="form-input" />
-                        <select [(ngModel)]="findingForm.findingCode" class="form-input">
+                        <input type="text" [(ngModel)]="findingForm.fdi" placeholder="Tooth FDI (e.g. 26)" maxlength="2" class="input" />
+                        <select [(ngModel)]="findingForm.findingCode" class="select">
                           <option value="" disabled>Select a finding...</option>
                           @for (def of diagnosticCatalogCodes(); track def.code) {
                             <option [value]="def.code">{{ def.code | titlecase }}</option>
                           }
                         </select>
-                        <select [(ngModel)]="findingForm.severity" class="form-input">
+                        <select [(ngModel)]="findingForm.severity" class="select">
                           <option value="">No severity</option>
                           <option value="MILD">Mild</option>
                           <option value="MODERATE">Moderate</option>
                           <option value="SEVERE">Severe</option>
                         </select>
-                        <textarea [(ngModel)]="findingForm.note" placeholder="Note (optional)" rows="2" class="form-input"></textarea>
+                        <textarea [(ngModel)]="findingForm.note" placeholder="Note (optional)" rows="2" class="textarea"></textarea>
                         <div class="inline-form-actions">
-                          <button type="button" class="btn-ghost btn-sm" (click)="showFindingForm.set(null)">{{ 'COMMON.CANCEL' | translate }}</button>
-                          <button type="button" class="btn-primary btn-sm" [disabled]="!findingForm.fdi || !findingForm.findingCode" (click)="submitFinding()">{{ 'COMMON.SAVE' | translate }}</button>
+                          <button type="button" class="btn btn-ghost btn-sm" (click)="showFindingForm.set(null)">{{ 'COMMON.CANCEL' | translate }}</button>
+                          <button type="button" class="btn btn-primary btn-sm" [disabled]="!findingForm.fdi || !findingForm.findingCode" (click)="submitFinding()">{{ 'COMMON.SAVE' | translate }}</button>
                         </div>
                       </div>
                     }
@@ -306,14 +306,14 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                               @if (finding.severity) { <span class="clinical-item-severity" [class]="finding.severity.toLowerCase()">{{ finding.severity }}</span> }
                               @if (finding.note) { <p class="clinical-item-detail">{{ finding.note }}</p> }
                             </div>
-                            <button type="button" class="btn-icon" (click)="resolveFinding(finding.id)" title="Mark resolved">
+                            <button type="button" class="btn btn-ghost btn-icon" (click)="resolveFinding(finding.id)" title="Mark resolved">
                               <span class="material-icons text-sm">check_circle</span>
                             </button>
                           </div>
                         }
                       </div>
                     } @else if (showFindingForm() !== 'diagnostic') {
-                      <div class="empty-state">
+                      <div class="empty">
                         <span class="material-icons">biotech</span>
                         <p>{{ 'PATIENTS.DOSSIER.NO_DIAGNOSTICS' | translate }}</p>
                       </div>
@@ -324,24 +324,24 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                   <section class="dossier-section">
                     <div class="notes-header">
                       <h2>{{ 'PATIENTS.DOSSIER.TREATMENT_PLAN' | translate }}</h2>
-                      <button type="button" class="btn-primary btn-sm" (click)="openFindingForm('plan')">
+                      <button type="button" class="btn btn-primary btn-sm" (click)="openFindingForm('plan')">
                         {{ 'COMMON.ADD' | translate }}
                       </button>
                     </div>
 
                     @if (showFindingForm() === 'plan') {
                       <div class="inline-form">
-                        <input type="text" [(ngModel)]="findingForm.fdi" placeholder="Tooth FDI (e.g. 26)" maxlength="2" class="form-input" />
-                        <select [(ngModel)]="findingForm.findingCode" class="form-input">
+                        <input type="text" [(ngModel)]="findingForm.fdi" placeholder="Tooth FDI (e.g. 26)" maxlength="2" class="input" />
+                        <select [(ngModel)]="findingForm.findingCode" class="select">
                           <option value="" disabled>Select required treatment...</option>
                           @for (def of treatmentRequiredCatalogCodes(); track def.code) {
                             <option [value]="def.code">{{ def.code | titlecase }}</option>
                           }
                         </select>
-                        <textarea [(ngModel)]="findingForm.note" placeholder="Note (optional)" rows="2" class="form-input"></textarea>
+                        <textarea [(ngModel)]="findingForm.note" placeholder="Note (optional)" rows="2" class="textarea"></textarea>
                         <div class="inline-form-actions">
-                          <button type="button" class="btn-ghost btn-sm" (click)="showFindingForm.set(null)">{{ 'COMMON.CANCEL' | translate }}</button>
-                          <button type="button" class="btn-primary btn-sm" [disabled]="!findingForm.fdi || !findingForm.findingCode" (click)="submitFinding()">{{ 'COMMON.SAVE' | translate }}</button>
+                          <button type="button" class="btn btn-ghost btn-sm" (click)="showFindingForm.set(null)">{{ 'COMMON.CANCEL' | translate }}</button>
+                          <button type="button" class="btn btn-primary btn-sm" [disabled]="!findingForm.fdi || !findingForm.findingCode" (click)="submitFinding()">{{ 'COMMON.SAVE' | translate }}</button>
                         </div>
                       </div>
                     }
@@ -355,14 +355,14 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                               <span class="clinical-item-label">{{ finding.findingCode | titlecase }}</span>
                               @if (finding.note) { <p class="clinical-item-detail">{{ finding.note }}</p> }
                             </div>
-                            <button type="button" class="btn-icon" (click)="resolveFinding(finding.id)" title="Mark treated">
+                            <button type="button" class="btn btn-ghost btn-icon" (click)="resolveFinding(finding.id)" title="Mark treated">
                               <span class="material-icons text-sm">check_circle</span>
                             </button>
                           </div>
                         }
                       </div>
                     } @else if (showFindingForm() !== 'plan') {
-                      <div class="empty-state">
+                      <div class="empty">
                         <span class="material-icons">assignment</span>
                         <p>{{ 'PATIENTS.DOSSIER.NO_TREATMENT_PLAN' | translate }}</p>
                       </div>
@@ -373,28 +373,32 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                   <section class="dossier-section">
                     <h2>{{ 'COMMON.SCHEDULE' | translate }}</h2>
                     @if (patientAppointments().length) {
-                      <table class="simple-table">
-                        <thead>
-                          <tr>
-                            <th>{{ 'COMMON.DATE' | translate }}</th>
-                            <th>{{ 'COMMON.TYPE' | translate }}</th>
-                            <th>{{ 'COMMON.STATUS' | translate }}</th>
-                            <th>{{ 'COMMON.NOTES' | translate }}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          @for (app of patientAppointments(); track app.id) {
-                            <tr>
-                              <td>{{ app.dateTime | date:'mediumDate' }}</td>
-                              <td>{{ app.type }}</td>
-                              <td><span class="status-badge">{{ app.status }}</span></td>
-                              <td>{{ app.notes }}</td>
-                            </tr>
-                          }
-                        </tbody>
-                      </table>
+                      <div class="table-wrap">
+                        <div class="table-scroll">
+                          <table class="data-table">
+                            <thead>
+                              <tr>
+                                <th>{{ 'COMMON.DATE' | translate }}</th>
+                                <th>{{ 'COMMON.TYPE' | translate }}</th>
+                                <th>{{ 'COMMON.STATUS' | translate }}</th>
+                                <th>{{ 'COMMON.NOTES' | translate }}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (app of patientAppointments(); track app.id) {
+                                <tr>
+                                  <td>{{ app.dateTime | date:'mediumDate' }}</td>
+                                  <td>{{ app.type }}</td>
+                                  <td><span class="status-badge">{{ app.status }}</span></td>
+                                  <td>{{ app.notes }}</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     } @else {
-                      <div class="empty-state">
+                      <div class="empty">
                         <span class="material-icons">event_busy</span>
                         <p>{{ 'PATIENTS.DOSSIER.NO_APPOINTMENTS' | translate }}</p>
                       </div>
@@ -405,22 +409,22 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                   <section class="dossier-section">
                     <div class="notes-header">
                       <h2>{{ 'DENTAL_CHART.REPORT_TITLE' | translate }}</h2>
-                      <button type="button" class="btn-primary btn-sm" (click)="showNoteForm.set(!showNoteForm())">
+                      <button type="button" class="btn btn-primary btn-sm" (click)="showNoteForm.set(!showNoteForm())">
                         {{ 'COMMON.ADD' | translate }} {{ 'DENTAL_CHART.NOTE_LABEL' | translate }}
                       </button>
                     </div>
 
                     @if (showNoteForm()) {
                       <div class="inline-form">
-                        <select [(ngModel)]="noteForm.category" class="form-input">
+                        <select [(ngModel)]="noteForm.category" class="select">
                           @for (cat of noteCategories; track cat) {
                             <option [value]="cat">{{ cat }}</option>
                           }
                         </select>
-                        <textarea [(ngModel)]="noteForm.content" placeholder="Note content..." rows="3" class="form-input"></textarea>
+                        <textarea [(ngModel)]="noteForm.content" placeholder="Note content..." rows="3" class="textarea"></textarea>
                         <div class="inline-form-actions">
-                          <button type="button" class="btn-ghost btn-sm" (click)="showNoteForm.set(false)">{{ 'COMMON.CANCEL' | translate }}</button>
-                          <button type="button" class="btn-primary btn-sm" [disabled]="!noteForm.content" (click)="submitNote()">{{ 'COMMON.SAVE' | translate }}</button>
+                          <button type="button" class="btn btn-ghost btn-sm" (click)="showNoteForm.set(false)">{{ 'COMMON.CANCEL' | translate }}</button>
+                          <button type="button" class="btn btn-primary btn-sm" [disabled]="!noteForm.content" (click)="submitNote()">{{ 'COMMON.SAVE' | translate }}</button>
                         </div>
                       </div>
                     }
@@ -435,14 +439,14 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                               <p class="clinical-item-detail">{{ note.content }}</p>
                               <span class="clinical-item-meta">{{ note.createdAt | date:'medium' }}</span>
                             </div>
-                            <button type="button" class="btn-icon danger" (click)="removeNote(note.id)" title="Delete">
+                            <button type="button" class="btn btn-ghost btn-icon" (click)="removeNote(note.id)" title="Delete">
                               <span class="material-icons text-sm">delete</span>
                             </button>
                           </div>
                         }
                       </div>
                     } @else if (!showNoteForm()) {
-                      <div class="empty-state">
+                      <div class="empty">
                         <span class="material-icons">history_edu</span>
                         <p>{{ 'PATIENTS.DOSSIER.NO_NOTES' | translate }}</p>
                       </div>
@@ -467,7 +471,7 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                     <div class="treatments-tracker">
                       <div class="tracker-header">
                         <h2>Patient Clinical Treatments</h2>
-                        <button type="button" class="btn-primary" (click)="openAssignModal()">
+                        <button type="button" class="btn btn-primary" (click)="openAssignModal()">
                           <span class="material-icons">add</span>
                           Assign Treatment
                         </button>
@@ -507,10 +511,10 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                               </div>
 
                               <div class="card-actions">
-                                <button type="button" class="btn-icon" (click)="openAssignModal(pt)" title="Edit">
+                                <button type="button" class="btn btn-ghost btn-icon" (click)="openAssignModal(pt)" title="Edit">
                                   <span class="material-icons text-slate-500 hover:text-slate-800">edit</span>
                                 </button>
-                                <button type="button" class="btn-icon danger" (click)="deletePatientTreatment(pt)" title="Delete">
+                                <button type="button" class="btn btn-ghost btn-icon" (click)="deletePatientTreatment(pt)" title="Delete">
                                   <span class="material-icons text-red-600 hover:text-red-700">delete</span>
                                 </button>
                               </div>
@@ -520,7 +524,7 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                           <div class="no-treatments">
                             <span class="material-icons large">health_and_safety</span>
                             <p>No treatments assigned to this patient.</p>
-                            <button type="button" class="btn-outline btn-sm mt-3" (click)="openAssignModal()">Assign First Treatment</button>
+                            <button type="button" class="btn btn-secondary btn-sm mt-3" (click)="openAssignModal()">Assign First Treatment</button>
                           </div>
                         }
                       </div>
@@ -536,7 +540,7 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                 <div class="modal-card" (click)="$event.stopPropagation()">
                   <header class="modal-header">
                     <h3>{{ isEditingTreatment() ? 'Edit Treatment Assignment' : 'Assign Treatment Procedure' }}</h3>
-                    <button type="button" class="close-btn" [attr.aria-label]="'COMMON.CLOSE' | translate" (click)="closeAssignModal()">
+                    <button type="button" class="btn btn-ghost btn-icon" [attr.aria-label]="'COMMON.CLOSE' | translate" (click)="closeAssignModal()">
                       <span class="material-icons" aria-hidden="true">close</span>
                     </button>
                   </header>
@@ -546,7 +550,7 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                       <!-- Select Treatment -->
                       <div class="form-group col-span-2">
                         <label>Select Treatment Setup *</label>
-                        <select [(ngModel)]="formTreatmentId" (ngModelChange)="onTreatmentSelected($event)" [disabled]="isEditingTreatment()" class="form-input">
+                        <select [(ngModel)]="formTreatmentId" (ngModelChange)="onTreatmentSelected($event)" [disabled]="isEditingTreatment()" class="select">
                           <option value="" disabled>-- Choose a predefined treatment --</option>
                           @for (t of availableTreatments(); track t.id) {
                             <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
@@ -557,19 +561,19 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                       <!-- Teeth comma separated -->
                       <div class="form-group">
                         <label>Assigned Teeth (FDI numbers separated by comma) *</label>
-                        <input type="text" [(ngModel)]="formTeeth" placeholder="e.g. 11, 12, 13" class="form-input">
+                        <input type="text" [(ngModel)]="formTeeth" placeholder="e.g. 11, 12, 13" class="input">
                       </div>
 
                       <!-- Doctor Name -->
                       <div class="form-group">
                         <label>Assigned Doctor *</label>
-                        <input type="text" [(ngModel)]="formDoctorName" class="form-input">
+                        <input type="text" [(ngModel)]="formDoctorName" class="input">
                       </div>
 
                       <!-- Status -->
                       <div class="form-group">
                         <label>Status</label>
-                        <select [(ngModel)]="formStatus" class="form-input">
+                        <select [(ngModel)]="formStatus" class="select">
                           <option value="PLANNED">PLANNED</option>
                           <option value="ACTIVE">ACTIVE</option>
                           <option value="COMPLETED">COMPLETED</option>
@@ -588,26 +592,26 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                       <!-- Start Date -->
                       <div class="form-group">
                         <label>Start Date</label>
-                        <input type="date" [(ngModel)]="formStartDate" class="form-input">
+                        <input type="date" [(ngModel)]="formStartDate" class="input">
                       </div>
 
                       <!-- End Date -->
                       <div class="form-group">
                         <label>End Date</label>
-                        <input type="date" [(ngModel)]="formEndDate" class="form-input">
+                        <input type="date" [(ngModel)]="formEndDate" class="input">
                       </div>
 
                       <!-- Notes -->
                       <div class="form-group col-span-2">
                         <label>Clinical Notes</label>
-                        <textarea [(ngModel)]="formNotes" placeholder="Describe clinical symptoms or execution details..." class="form-textarea"></textarea>
+                        <textarea [(ngModel)]="formNotes" placeholder="Describe clinical symptoms or execution details..." class="textarea"></textarea>
                       </div>
 
                       <!-- Predefined Materials / Consumables -->
                       <div class="form-group col-span-2">
                         <div class="flex justify-between items-center mb-2">
                           <span class="font-bold text-slate-700 text-sm">Material Consumption Settings</span>
-                          <button type="button" class="btn-outline btn-sm" (click)="addConsumableToForm()">
+                          <button type="button" class="btn btn-secondary btn-sm" (click)="addConsumableToForm()">
                             <span class="material-icons">add</span> Add Material
                           </button>
                         </div>
@@ -617,18 +621,18 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                             @for (c of formConsumables; track $index) {
                               <div class="consumable-editor-row">
                                 <div class="item-select">
-                                  <select [(ngModel)]="c.stockItem" class="form-input-sm">
+                                  <select [(ngModel)]="c.stockItem" class="select">
                                     @for (item of availableStockItems(); track item.id) {
                                       <option [ngValue]="item">{{ item.name }} (SKU: {{ item.sku }})</option>
                                     }
                                   </select>
                                 </div>
                                 <div class="item-qty">
-                                  <input type="number" step="any" [(ngModel)]="c.quantityUsed" class="form-input-sm" style="width: 80px;">
+                                  <input type="number" step="any" [(ngModel)]="c.quantityUsed" class="input" style="width: 80px;">
                                   <span class="text-xs text-slate-500 ms-1">{{ c.stockItem.unitLabel || 'Units' }}</span>
                                 </div>
                                 <div class="item-actions">
-                                  <button type="button" class="btn-icon danger" (click)="removeConsumableFromForm($index)">
+                                  <button type="button" class="btn btn-ghost btn-icon" (click)="removeConsumableFromForm($index)">
                                     <span class="material-icons text-sm text-red-600">delete</span>
                                   </button>
                                 </div>
@@ -643,8 +647,8 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                   </div>
 
                   <footer class="modal-footer mt-4">
-                    <button type="button" class="btn-outline" (click)="closeAssignModal()">Cancel</button>
-                    <button type="button" class="btn-primary" (click)="savePatientTreatment()">Save Assignment</button>
+                    <button type="button" class="btn btn-secondary" (click)="closeAssignModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" (click)="savePatientTreatment()">Save Assignment</button>
                   </footer>
                 </div>
               </div>
@@ -654,7 +658,7 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
             <div class="tab-pane" role="tabpanel" id="dossier-panel-financial" aria-labelledby="dossier-tab-financial" tabindex="0">
               <div class="billing-header">
                 <h2>{{ 'BILLING.TITLE' | translate }}</h2>
-                <button type="button" class="btn-primary" [routerLink]="['/billing/invoices/create']" [queryParams]="{ patientId: patient.id }">
+                <button type="button" class="btn btn-primary" [routerLink]="['/billing/invoices/create']" [queryParams]="{ patientId: patient.id }">
                   <span class="material-icons">add</span>
                   {{ 'BILLING.NEW_INVOICE' | translate }}
                 </button>
@@ -671,38 +675,42 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
                 </div>
               </div>
 
-              <table class="simple-table">
-                <thead>
-                  <tr>
-                    <th>{{ 'BILLING.INVOICE_NUMBER' | translate }}</th>
-                    <th>{{ 'COMMON.STATUS' | translate }}</th>
-                    <th>{{ 'COMMON.DATE' | translate }}</th>
-                    <th>{{ 'COMMON.AMOUNT' | translate }}</th>
-                    <th>{{ 'COMMON.ACTIONS' | translate }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (invoice of patientInvoices(); track invoice.id) {
-                    <tr>
-                      <td><span class="invoice-link" [routerLink]="['/billing/invoices', invoice.id]">{{ invoice.invoiceNumber }}</span></td>
-                      <td>
-                        <span class="status-badge" [class]="invoice.status.toLowerCase().replace('_', '-')">
-                          {{ 'BILLING.STATUS.' + invoice.status | translate }}
-                        </span>
-                      </td>
-                      <td>{{ invoice.issueDate | date:'mediumDate' }}</td>
-                      <td>{{ invoice.total | number:'1.2-2' }} {{ invoice.currency }}</td>
-                      <td>
-                        <button type="button" class="icon-btn" [title]="'PATIENTS.DOSSIER.DOWNLOAD_PDF' | translate" [attr.aria-label]="'PATIENTS.DOSSIER.DOWNLOAD_PDF' | translate"><span class="material-icons" aria-hidden="true">download</span></button>
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="5" class="empty-state">{{ 'PATIENTS.DOSSIER.NO_INVOICES' | translate }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+              <div class="table-wrap">
+                <div class="table-scroll">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>{{ 'BILLING.INVOICE_NUMBER' | translate }}</th>
+                        <th>{{ 'COMMON.STATUS' | translate }}</th>
+                        <th>{{ 'COMMON.DATE' | translate }}</th>
+                        <th>{{ 'COMMON.AMOUNT' | translate }}</th>
+                        <th>{{ 'COMMON.ACTIONS' | translate }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (invoice of patientInvoices(); track invoice.id) {
+                        <tr>
+                          <td><span class="invoice-link" [routerLink]="['/billing/invoices', invoice.id]">{{ invoice.invoiceNumber }}</span></td>
+                          <td>
+                            <span class="status-badge" [class]="invoice.status.toLowerCase().replace('_', '-')">
+                              {{ 'BILLING.STATUS.' + invoice.status | translate }}
+                            </span>
+                          </td>
+                          <td>{{ invoice.issueDate | date:'mediumDate' }}</td>
+                          <td>{{ invoice.total | number:'1.2-2' }} {{ invoice.currency }}</td>
+                          <td>
+                            <button type="button" class="icon-btn" [title]="'PATIENTS.DOSSIER.DOWNLOAD_PDF' | translate" [attr.aria-label]="'PATIENTS.DOSSIER.DOWNLOAD_PDF' | translate"><span class="material-icons" aria-hidden="true">download</span></button>
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="5" class="empty">{{ 'PATIENTS.DOSSIER.NO_INVOICES' | translate }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           }
         }
@@ -1253,31 +1261,6 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
       margin: 0;
     }
 
-    .close-btn {
-      background: rgb(var(--ink-100));
-      border: none;
-      padding: 0.4rem;
-      min-width: 44px;
-      min-height: 44px;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      color: rgb(var(--ink-500));
-      transition: all 0.2s;
-    }
-
-    .close-btn:hover {
-      background: rgb(var(--ink-200));
-      color: rgb(var(--ink-900));
-    }
-
-    .close-btn:focus-visible {
-      outline: 2px solid var(--focus-ring);
-      outline-offset: 2px;
-    }
-
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1300,33 +1283,6 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
       color: rgb(var(--ink-600));
       text-transform: uppercase;
       letter-spacing: 0.05em;
-    }
-
-    .form-input, .form-input-sm, .form-textarea {
-      width: 100%;
-      border: 1px solid rgb(var(--ink-300));
-      border-radius: 8px;
-      padding: 0.6rem 0.75rem;
-      font-size: 0.9rem;
-      color: rgb(var(--ink-900));
-      transition: border-color 0.2s;
-      background: white;
-    }
-
-    .form-input-sm {
-      padding: 0.4rem 0.5rem;
-      font-size: 0.8rem;
-    }
-
-    .form-input:focus, .form-textarea:focus {
-      outline: none;
-      border-color: rgb(var(--petrol-900));
-      box-shadow: 0 0 0 3px rgba(3, 4, 94, 0.1);
-    }
-
-    .form-textarea {
-      height: 80px;
-      resize: vertical;
     }
 
     .consumable-editor-row {
@@ -1374,27 +1330,6 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
       color: rgb(var(--ink-600));
     }
     .tag.alert { background: rgb(var(--critical-100)); color: rgb(var(--critical-700)); }
-
-    .simple-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-    }
-    .simple-table th {
-      text-align: start;
-      padding: 1rem;
-      background: rgb(var(--ink-50));
-      font-size: 0.85rem;
-      color: rgb(var(--ink-500));
-    }
-    .simple-table td {
-      padding: 1rem;
-      border-top: 1px solid rgb(var(--ink-100));
-      color: rgb(var(--ink-700));
-    }
 
     .notes-header {
       display: flex;
@@ -1445,18 +1380,6 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
     }
     .doc-info .name { display: block; font-weight: 600; font-size: 0.9rem; color: rgb(var(--ink-900)); }
     .doc-info .date { font-size: 0.75rem; color: rgb(var(--ink-500)); }
-    .btn-outline {
-      background: white;
-      border: 1px solid rgb(var(--ink-200));
-      color: rgb(var(--ink-600));
-      padding: 0.6rem 1.25rem;
-      border-radius: 8px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-    }
     
     .billing-header {
       display: flex;
@@ -1504,18 +1427,14 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
 
     .invoice-link:hover { text-decoration: underline; }
 
-    .empty-state {
-      text-align: center;
-      padding: 3rem !important;
+    /* .empty (shared) supplies the flex/centering/padding shell; this only
+       adapts the icon+paragraph markup used here to look the same as before. */
+    .empty p {
       color: rgb(var(--ink-500));
       font-style: italic;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
     }
 
-    .empty-state .material-icons {
+    .empty .material-icons {
       font-size: 2rem;
       color: rgb(var(--ink-300));
     }
@@ -1561,15 +1480,6 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
       border-radius: 12px;
       padding: 1rem;
       margin-bottom: 1rem;
-    }
-
-    .inline-form .form-input {
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      border: 1px solid rgb(var(--ink-200));
-      border-radius: 8px;
-      font-size: 0.875rem;
-      font-family: inherit;
     }
 
     .inline-form-actions {
@@ -1647,8 +1557,6 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
       font-size: 0.75rem;
       color: rgb(var(--ink-400));
     }
-
-    .btn-sm { padding: 0.4rem 0.75rem; font-size: 0.85rem; }
 
     .loading {
       display: flex;

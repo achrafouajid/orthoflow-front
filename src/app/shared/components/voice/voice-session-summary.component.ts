@@ -137,8 +137,8 @@ import { ToastService } from '../../../core/services/toast.service';
               consultation as reviewed.
             </p>
             <div class="footer-actions">
-              <button type="button" class="btn-secondary" (click)="session.closeSummary()">Keep editing</button>
-              <button type="button" class="btn-primary" [disabled]="confirming()" (click)="confirm()">
+              <button type="button" class="btn btn-secondary" (click)="session.closeSummary()">Keep editing</button>
+              <button type="button" class="btn btn-primary" [disabled]="confirming()" (click)="confirm()">
                 <span class="material-icons">check_circle</span>
                 {{ confirming() ? 'Confirming…' : 'Confirm findings' }}
               </button>

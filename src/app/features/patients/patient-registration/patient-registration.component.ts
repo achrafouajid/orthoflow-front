@@ -163,8 +163,8 @@ function notInFutureValidator(control: AbstractControl): ValidationErrors | null
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn-ghost" [routerLink]="editMode ? ['/patients', patientId] : ['/patients']">{{ 'COMMON.CANCEL' | translate }}</button>
-            <button type="submit" class="btn-primary" [disabled]="patientForm.invalid">
+            <button type="button" class="btn-form-cancel" [routerLink]="editMode ? ['/patients', patientId] : ['/patients']">{{ 'COMMON.CANCEL' | translate }}</button>
+            <button type="submit" class="btn btn-primary" [disabled]="patientForm.invalid">
               {{ (editMode ? 'COMMON.EDIT' : 'COMMON.ADD') | translate }} {{ 'PATIENTS.NAME' | translate }}
             </button>
           </div>
@@ -315,7 +315,9 @@ function notInFutureValidator(control: AbstractControl): ValidationErrors | null
       margin-top: 1rem;
     }
 
-    .btn-ghost {
+    /* Named distinctly from the shared .btn-ghost (which this doesn't match:
+       it keeps a visible border) so it doesn't shadow the canonical class. */
+    .btn-form-cancel {
       background: transparent;
       border: 1px solid rgb(var(--ink-200));
       color: rgb(var(--ink-500));
@@ -326,7 +328,7 @@ function notInFutureValidator(control: AbstractControl): ValidationErrors | null
       transition: all 0.2s ease;
     }
 
-    .btn-ghost:hover {
+    .btn-form-cancel:hover {
       background: rgb(var(--ink-50));
       color: rgb(var(--ink-700));
     }

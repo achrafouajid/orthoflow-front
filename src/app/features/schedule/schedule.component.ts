@@ -38,14 +38,14 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
             <button type="button" class="icon-btn" [attr.aria-label]="'SCHEDULE.NEXT' | translate" (click)="navigate(1)">
               <span class="material-icons" aria-hidden="true">chevron_right</span>
             </button>
-            <button type="button" class="btn-ghost" (click)="goToToday()">{{ 'SCHEDULE.TODAY' | translate }}</button>
+            <button type="button" class="btn-schedule-ghost" (click)="goToToday()">{{ 'SCHEDULE.TODAY' | translate }}</button>
           </div>
           <div class="filters">
             <div class="search-box">
               <span class="material-icons">search</span>
               <input type="text" [placeholder]="'SCHEDULE.FILTER_PLACEHOLDER' | translate" (input)="onPatientFilter($event)" />
             </div>
-            <button type="button" class="btn-primary" (click)="openAddModal()">
+            <button type="button" class="btn btn-primary" (click)="openAddModal()">
               <span class="material-icons">add</span>
               {{ 'SCHEDULE.NEW_APPOINTMENT' | translate }}
             </button>
@@ -300,14 +300,14 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
 
               <footer class="modal-footer">
                 @if (editingAppointment()) {
-                  <button type="button" class="btn-danger" (click)="deleteAppointment()">
+                  <button type="button" class="btn btn-danger" (click)="deleteAppointment()">
                     <span class="material-icons">delete</span>
                     {{ 'COMMON.DELETE' | translate }}
                   </button>
                 }
                 <div class="footer-right">
-                  <button type="button" class="btn-ghost" (click)="closeModal()">{{ 'COMMON.CANCEL' | translate }}</button>
-                  <button type="submit" class="btn-primary" [disabled]="appointmentForm.invalid">
+                  <button type="button" class="btn-schedule-ghost" (click)="closeModal()">{{ 'COMMON.CANCEL' | translate }}</button>
+                  <button type="submit" class="btn btn-primary" [disabled]="appointmentForm.invalid">
                     {{ 'COMMON.SAVE' | translate }}
                   </button>
                 </div>
@@ -743,7 +743,10 @@ type CalendarView = 'day' | 'week' | 'month' | 'year';
       outline-offset: -2px;
     }
 
-    .btn-ghost {
+    /* Named distinctly from the shared .btn-ghost (which this doesn't
+       match: it keeps a visible border) so it doesn't shadow the
+       canonical class. */
+    .btn-schedule-ghost {
       background: transparent;
       border: 1px solid var(--border);
       padding: 0.5rem 1rem;

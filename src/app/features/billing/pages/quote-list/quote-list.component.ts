@@ -20,14 +20,15 @@ import { InvoiceService } from '../../services/invoice.service';
             <p>{{ 'BILLING.QUOTES_SUBTITLE' | translate }}</p>
           </div>
         </div>
-        <button type="button" class="btn-primary">
+        <button type="button" class="btn btn-primary">
           <span class="material-icons">add</span>
           {{ 'BILLING.NEW_QUOTE' | translate }}
         </button>
       </header>
 
-      <div class="table-card">
-        <table class="billing-table">
+      <div class="table-wrap">
+        <div class="table-scroll">
+        <table class="data-table">
           <thead>
             <tr>
               <th>{{ 'BILLING.QUOTE_NUMBER' | translate }}</th>
@@ -66,6 +67,7 @@ import { InvoiceService } from '../../services/invoice.service';
             }
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   `,
@@ -77,11 +79,6 @@ import { InvoiceService } from '../../services/invoice.service';
     .back-btn { background: white; border: 1px solid rgb(var(--ink-200)); border-radius: 12px; padding: 0.5rem; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; cursor: pointer; display: flex; color: rgb(var(--ink-500)); }
     .back-btn:focus-visible, .icon-btn:focus-visible, .btn-primary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-    .table-card { background: white; border-radius: 16px; border: 1px solid rgb(var(--ink-200)); overflow: hidden; }
-    .billing-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .billing-table th { background: rgb(var(--ink-50)); padding: 1rem 1.5rem; font-size: 0.75rem; font-weight: 600; color: rgb(var(--ink-500)); text-transform: uppercase; }
-    .billing-table td { padding: 1.25rem 1.5rem; border-top: 1px solid rgb(var(--ink-100)); }
-    
     .quote-number { font-weight: 600; color: rgb(var(--petrol-900)); }
     
     .amount { font-weight: 700; color: rgb(var(--ink-900)); }

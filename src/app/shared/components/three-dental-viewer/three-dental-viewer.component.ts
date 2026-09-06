@@ -10,6 +10,7 @@ import {
   OnDestroy,
   SimpleChanges,
   NgZone,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as THREE from 'three';
@@ -157,7 +158,11 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
     if (!this.renderingPaused) this.animate();
   };
 
-  constructor(private ngZone: NgZone) {}
+  // This app runs zoneless (no zone.js dependency; Angular 21 defaults to
+  // zoneless change detection). NgZone.run() therefore does NOT schedule a
+  // re-render, so any template-bound state mutated from an async Three.js
+  // callback has to be reported with markForCheck().
+  constructor(private ngZone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     if (!this.lazy) {
@@ -366,16 +371,23 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
 
         this.mapTeethMeshesByPositions(model);
 
-        this.loading = false;
         this.applyColors();
         this.applyHighlight();
+        // loadModel() runs inside runOutsideAngular, so this callback resolves
+        // outside the zone. `loading` and `mappingFailed` are both bound in the
+        // template: flipping them here without re-entering the zone left the
+        // "Loading 3D Anatomy…" overlay covering a fully rendered model until
+        // some unrelated event happened to trigger change detection.
+        this.loading = false;
+        this.cdr.markForCheck();
       },
       (error) => {
         console.warn('Failed to load 3D GLTF model. Rendering high-fidelity procedural arch instead.', error);
         this.generateProceduralArch();
-        this.loading = false;
         this.applyColors();
         this.applyHighlight();
+        this.loading = false;
+        this.cdr.markForCheck();
       }
     );
   }

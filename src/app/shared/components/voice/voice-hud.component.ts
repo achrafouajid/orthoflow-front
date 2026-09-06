@@ -59,7 +59,10 @@ import { SpeechFeedbackService } from '../../../core/voice/speech-feedback.servi
                 <p class="consent-body">
                   A consultation-room microphone picks up everything said nearby, not only your
                   commands — including information about the patient and anyone else present.
-                  @if (!voice.recognitionIsLocal()) {
+                  @if (voice.speechEngine() === 'groq') {
+                    <strong>The recording is sent to this practice's server and on to the
+                    Whisper transcription service.</strong>
+                  } @else if (!voice.recognitionIsLocal()) {
                     <strong>This browser sends the captured audio to a cloud speech service to be
                     transcribed.</strong> Safari keeps recognition on this device.
                   } @else {
@@ -149,7 +152,22 @@ import { SpeechFeedbackService } from '../../../core/voice/speech-feedback.servi
                     </li>
                   }
                 </ul>
-                @if (!voice.recognitionIsLocal()) {
+                <div class="help-engine">
+                  <span class="help-engine-label">Speech engine</span>
+                  <div class="engine-toggle" role="group" aria-label="Speech-to-text engine">
+                    <button type="button" [class.active]="voice.speechEngine() === 'browser'"
+                            (click)="voice.setSpeechEngine('browser')">Browser</button>
+                    <button type="button" [class.active]="voice.speechEngine() === 'groq'"
+                            (click)="voice.setSpeechEngine('groq')">Whisper</button>
+                  </div>
+                </div>
+                @if (voice.speechEngine() === 'groq') {
+                  <p class="help-note">
+                    <span class="material-icons">info</span>
+                    Recordings go to this practice's server, then to the Whisper transcription
+                    service. Server-side transcription must be enabled on the backend.
+                  </p>
+                } @else if (!voice.recognitionIsLocal()) {
                   <p class="help-note">
                     <span class="material-icons">info</span>
                     This browser sends audio to a cloud speech service. Safari keeps recognition
@@ -323,6 +341,19 @@ import { SpeechFeedbackService } from '../../../core/voice/speech-feedback.servi
       display: flex; gap: 0.375rem; margin: 0.5rem 0 0; font-size: 0.75rem; color: rgb(var(--ink-500)); line-height: 1.4;
     }
     .help-note .material-icons { font-size: 0.9375rem; flex-shrink: 0; }
+
+    .help-engine {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      margin-top: 0.625rem; padding-top: 0.5rem; border-top: 1px solid rgb(var(--ink-100));
+    }
+    .help-engine-label { font-size: 0.75rem; font-weight: 700; color: rgb(var(--ink-600)); }
+    .engine-toggle { display: flex; border: 1px solid rgb(var(--ink-300)); border-radius: 999px; overflow: hidden; }
+    .engine-toggle button {
+      background: #fff; border: none; cursor: pointer; padding: 0.25rem 0.625rem;
+      font-size: 0.75rem; font-weight: 600; color: rgb(var(--ink-500)); font-family: inherit;
+    }
+    .engine-toggle button + button { border-left: 1px solid rgb(var(--ink-300)); }
+    .engine-toggle button.active { background: rgb(var(--petrol-600)); color: #fff; }
 
     .hud-typed { display: flex; gap: 0.375rem; margin-top: 0.75rem; }
     .hud-typed input {

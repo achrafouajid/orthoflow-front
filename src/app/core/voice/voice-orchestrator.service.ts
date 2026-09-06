@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ToastService } from '../services/toast.service';
-import { SpeechRecognitionService } from './speech-recognition.service';
+import { RecognitionEngine, SpeechRecognitionService } from './speech-recognition.service';
 import { SpeechFeedbackService } from './speech-feedback.service';
 import { VoiceContextService } from './voice-context.service';
 import { VoiceCommandRegistryService } from './voice-command-registry.service';
@@ -118,6 +118,17 @@ export class VoiceOrchestratorService {
   /** True until the clinician has opted in to the microphone being opened. */
   needsConsent = computed(() => this.speech.status() === 'consent-required');
 
+  /** 'browser' (built-in SpeechRecognition) or 'groq' (server-side Whisper). */
+  speechEngine = computed(() => this.speech.engine());
+
+  /** Switch the speech-to-text engine. Persisted per browser. */
+  setSpeechEngine(engine: RecognitionEngine): void {
+    if (this.isListening()) this.stopListening();
+    this.speech.setEngine(engine);
+    this.errorSignal.set(null);
+    if (this.stateSignal() === 'error') this.stateSignal.set('idle');
+  }
+
   grantMicrophoneConsent(): void {
     this.speech.grantConsent();
   }
@@ -145,6 +156,10 @@ export class VoiceOrchestratorService {
     this.speech.setResultHandler(result => {
       void this.handleTranscript(result.transcript, result.confidence);
     });
+    // Asynchronous capture failures (permission denied after the tap, a
+    // transcription round trip that failed) surface through the same path as
+    // a synchronous start() failure.
+    this.speech.setErrorHandler(message => this.reportError(message));
     this.wired = true;
   }
 

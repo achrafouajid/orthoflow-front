@@ -35,6 +35,21 @@ export interface InterpretResponseDto {
   error: string | null;
 }
 
+export interface TranscriptionResponseDto {
+  /** The recognised text, or '' when the server produced none. */
+  text: string;
+  provider: string;
+  model: string;
+  /** Language Whisper detected for the clip, when it reported one. */
+  language: string | null;
+  /**
+   * Non-null when the server did not transcribe: 'stt-disabled' (server-side
+   * STT is off), 'stt-not-configured', or an upstream failure tag. The client
+   * falls back to the browser recogniser rather than treating it as an error.
+   */
+  error: string | null;
+}
+
 export interface RecordVoiceCommandDto {
   patientId: string | null;
   sessionId: string | null;
@@ -93,6 +108,21 @@ export class VoiceApiService {
    */
   interpret(request: InterpretRequestDto): Observable<InterpretResponseDto> {
     return this.http.post<InterpretResponseDto>(`${this.base}/interpret`, request);
+  }
+
+  /**
+   * Sends one captured clip to the server's Whisper proxy and gets back a
+   * transcript, which the pipeline then treats identically to a
+   * browser-recognised or typed utterance. The API key stays on the server;
+   * the browser never sees it.
+   *
+   * Do not set Content-Type — the browser adds the multipart boundary.
+   */
+  transcribe(audio: Blob, filename: string, language?: string): Observable<TranscriptionResponseDto> {
+    const form = new FormData();
+    form.append('file', audio, filename);
+    if (language) form.append('language', language);
+    return this.http.post<TranscriptionResponseDto>(`${this.base}/transcribe`, form);
   }
 
   /**

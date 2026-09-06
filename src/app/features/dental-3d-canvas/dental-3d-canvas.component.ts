@@ -8,6 +8,7 @@ import { ToothState, ToothStatus } from '../../core/models/patient.model';
 import { FAMILY_PAINT, TOOTH_STATUS_GROUPS, toothStatusDefinition } from '../../core/clinical/tooth-status';
 import { DentalChartService } from '../../core/services/dental-chart.service';
 import { DentalAuditLogComponent } from './components/dental-audit-log.component';
+import { ToothCloseupViewerComponent } from './components/tooth-closeup-viewer.component';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -18,7 +19,8 @@ import { AuthService } from '../../core/services/auth.service';
     FormsModule,
     TranslateModule,
     ThreeDentalViewerComponent,
-    DentalAuditLogComponent
+    DentalAuditLogComponent,
+    ToothCloseupViewerComponent
   ],
   template: `
     <div class="canvas-3d-wrapper">
@@ -149,6 +151,14 @@ import { AuthService } from '../../core/services/auth.service';
             </header>
 
             <div class="panel-content">
+              <app-tooth-closeup-viewer [fdi]="toothId" mode="surface" />
+
+              <app-tooth-closeup-viewer [fdi]="toothId" mode="root" />
+              <p class="schematic-note">
+                Vue radiculaire schématique — canal reconstruit à partir de la
+                morphologie externe, pas de l'anatomie endodontique du patient.
+              </p>
+
               <div class="info-card">
                 <span class="label">Anatomical Name</span>
                 <span class="value">{{ getToothName(toothId) }}</span>

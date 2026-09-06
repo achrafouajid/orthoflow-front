@@ -409,3 +409,13 @@
   background: rgb(var(--ink-700));
   color: #ffffff;
 }
+
+/* Caption under the schematic root view. It is not scan data, and the panel
+   sits directly above the controls that write a diagnosis, so the caveat
+   travels with the picture rather than living in a tooltip. */
+.schematic-note {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.65rem;
+  line-height: 1.4;
+  color: #8b8b8b;
+}

@@ -64,15 +64,18 @@ const TOOTH_MODELS: Record<string, { obj: string; map: string; normalMap: string
     </div>
   `,
   styles: [`
+    :host { display: block; width: 100%; height: 100%; }
+    /* Fills whatever the host gives it — the main stage is a flex child, so
+       the viewport grows with the panel instead of sitting at a fixed height. */
     .closeup {
       position: relative;
       width: 100%;
-      height: 190px;
+      height: 100%;
+      min-height: 180px;
       border-radius: 12px;
       overflow: hidden;
       border: 1px solid #e2e8f0;
       background: radial-gradient(circle at center, #ffffff 0%, #ffffff 55%, #eef1f5 100%);
-      margin-bottom: 0.75rem;
     }
     .closeup-stage { width: 100%; height: 100%; }
     .closeup-empty,

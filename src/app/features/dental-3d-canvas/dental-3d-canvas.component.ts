@@ -61,35 +61,38 @@ import { AuthService } from '../../core/services/auth.service';
             <!-- Single-tooth view: takes over the main stage, arch is one click away -->
             <div class="focused-view-container">
               <header class="quadrant-header">
-                <div class="flex items-center gap-4">
-                  <span class="quadrant-title">
-                    <span class="material-icons text-xs me-1">view_in_ar</span>
-                    Dent {{ selectedTooth() }} — {{ getToothName(selectedTooth()!) }}
-                  </span>
-                  <div class="view-tabs">
-                    <button type="button" class="view-tab-btn"
-                      [class.active]="toothViewMode() === 'surface'"
-                      (click)="toothViewMode.set('surface')">Surface</button>
-                    <button type="button" class="view-tab-btn"
-                      [class.active]="toothViewMode() === 'root'"
-                      (click)="toothViewMode.set('root')">Racine</button>
-                  </div>
-                </div>
+                <span class="quadrant-title">
+                  <span class="material-icons text-xs me-1">view_in_ar</span>
+                  Dent {{ selectedTooth() }} — {{ getToothName(selectedTooth()!) }}
+                </span>
                 <div class="quadrant-actions">
                   <button type="button" class="icon-btn-sm" aria-label="Retour à l'arcade" (click)="backToArch()">
                     <span class="material-icons" aria-hidden="true">arrow_back</span>
                   </button>
                 </div>
               </header>
-              <div class="focused-view-body">
+              <div class="focused-view-body tooth-stage">
                 <app-tooth-closeup-viewer [fdi]="selectedTooth()" [mode]="toothViewMode()" />
+
+                <!-- Representation switch sits on the view it controls -->
+                <div class="tooth-view-switch" role="group" aria-label="Représentation de la dent">
+                  <button type="button"
+                    [class.active]="toothViewMode() === 'surface'"
+                    [attr.aria-pressed]="toothViewMode() === 'surface'"
+                    (click)="toothViewMode.set('surface')">Surface</button>
+                  <button type="button"
+                    [class.active]="toothViewMode() === 'root'"
+                    [attr.aria-pressed]="toothViewMode() === 'root'"
+                    (click)="toothViewMode.set('root')">Racine</button>
+                </div>
+
+                @if (toothViewMode() === 'root') {
+                  <p class="schematic-note">
+                    Vue radiculaire schématique — canal reconstruit à partir de la
+                    morphologie externe, pas de l'anatomie endodontique du patient.
+                  </p>
+                }
               </div>
-              @if (toothViewMode() === 'root') {
-                <p class="schematic-note">
-                  Vue radiculaire schématique — canal reconstruit à partir de la
-                  morphologie externe, pas de l'anatomie endodontique du patient.
-                </p>
-              }
             </div>
           } @else if (gridMode() === 'grid') {
             <div class="grid-2x2">

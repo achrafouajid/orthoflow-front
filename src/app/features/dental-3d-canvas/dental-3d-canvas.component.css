@@ -410,12 +410,61 @@
   color: #ffffff;
 }
 
-/* Caption under the schematic root view. It is not scan data, and the panel
-   sits directly above the controls that write a diagnosis, so the caveat
-   travels with the picture rather than living in a tooltip. */
+/* The tooth stage is the positioning context for the controls that float
+   over the 3D view. */
+.tooth-stage {
+  position: relative;
+}
+
+/* Representation switch, over the view rather than up in the panel banner —
+   it changes what you are looking at, so it belongs on the thing it changes. */
+.tooth-view-switch {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 6;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(4px);
+}
+
+.tooth-view-switch button {
+  border: 0;
+  cursor: pointer;
+  padding: 0.3rem 0.85rem;
+  border-radius: 100px;
+  background: transparent;
+  color: #60606c;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.tooth-view-switch button:hover { color: #070709; }
+
+.tooth-view-switch button.active {
+  background: #070709;
+  color: #ffffff;
+}
+
+/* Caption for the schematic root view. It is not scan data, and this stage
+   sits beside the controls that write a diagnosis, so the caveat travels
+   with the picture rather than living in a tooltip. */
 .schematic-note {
-  margin: -0.35rem 0 0.85rem;
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 1.6rem;      /* clears the viewer's own drag/zoom hint */
+  z-index: 6;
+  margin: 0;
+  text-align: center;
   font-size: 0.65rem;
   line-height: 1.4;
-  color: #8b8b8b;
+  color: #6b7280;
 }

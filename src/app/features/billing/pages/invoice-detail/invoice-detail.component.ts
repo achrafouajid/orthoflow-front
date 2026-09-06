@@ -29,23 +29,23 @@ import { PatientService } from '../../../../core/services/patient.service';
             </div>
           </div>
           <div class="header-actions">
-            <button type="button" class="btn-secondary" (click)="downloadPdf(inv)">
+            <button type="button" class="btn btn-secondary" (click)="downloadPdf(inv)">
               <span class="material-icons">download</span>
               PDF
             </button>
-            <button type="button" class="btn-secondary">
+            <button type="button" class="btn btn-secondary">
               <span class="material-icons">email</span>
               Send
             </button>
             @if (inv.status === 'DRAFT') {
-              <button type="button" class="btn-primary">Edit Invoice</button>
+              <button type="button" class="btn btn-primary">Edit Invoice</button>
             }
           </div>
         </header>
 
         <div class="detail-grid">
           <div class="main-content">
-            <div class="card patient-card">
+            <div class="invoice-card patient-card">
               <div class="card-header">
                 <h3>Patient & Practice</h3>
               </div>
@@ -71,7 +71,7 @@ import { PatientService } from '../../../../core/services/patient.service';
               </div>
             </div>
 
-            <div class="card items-card">
+            <div class="invoice-card items-card">
               <div class="card-header">
                 <h3>Line Items</h3>
               </div>
@@ -117,7 +117,7 @@ import { PatientService } from '../../../../core/services/patient.service';
               </div>
             </div>
 
-            <div class="card payments-card">
+            <div class="invoice-card payments-card">
               <div class="card-header">
                 <h3>{{ 'BILLING.PAYMENT_HISTORY' | translate }}</h3>
               </div>
@@ -153,7 +153,7 @@ import { PatientService } from '../../../../core/services/patient.service';
           </div>
 
           <div class="sidebar">
-            <div class="card balance-card">
+            <div class="invoice-card balance-card">
               <div class="balance-content">
                 <span class="balance-label">{{ 'BILLING.REMAINING_BALANCE' | translate }}</span>
                 <span class="balance-value" [class.paid]="remainingBalance() === 0">
@@ -161,7 +161,7 @@ import { PatientService } from '../../../../core/services/patient.service';
                 </span>
               </div>
               @if (remainingBalance() > 0) {
-                <button type="button" class="btn-primary full-width" (click)="showPaymentForm.set(true)">
+                <button type="button" class="btn btn-primary full-width" (click)="showPaymentForm.set(true)">
                   <span class="material-icons">add</span>
                   {{ 'BILLING.RECORD_PAYMENT' | translate }}
                 </button>
@@ -169,7 +169,7 @@ import { PatientService } from '../../../../core/services/patient.service';
             </div>
 
             @if (showPaymentForm()) {
-              <div class="card payment-form-card">
+              <div class="invoice-card payment-form-card">
                 <div class="card-header">
                   <h3>{{ 'BILLING.RECORD_PAYMENT' | translate }}</h3>
                   <button type="button" class="icon-btn" [attr.aria-label]="'COMMON.CLOSE' | translate" (click)="showPaymentForm.set(false)">
@@ -194,7 +194,7 @@ import { PatientService } from '../../../../core/services/patient.service';
                     <label>{{ 'BILLING.REFERENCE' | translate }}</label>
                     <input type="text" [(ngModel)]="paymentRef" class="form-control" [placeholder]="'COMMON.OPTIONAL' | translate">
                   </div>
-                  <button type="button" class="btn-primary full-width mt-4" (click)="recordPayment()">
+                  <button type="button" class="btn btn-primary full-width mt-4" (click)="recordPayment()">
                     {{ 'COMMON.SUBMIT' | translate }}
                   </button>
                 </div>
@@ -269,7 +269,10 @@ import { PatientService } from '../../../../core/services/patient.service';
       gap: 2rem;
     }
 
-    .card {
+    /* Named distinctly from the shared .card (which this doesn't fully
+       match — hardcoded radius, an added margin-bottom) so it doesn't
+       shadow the canonical class. */
+    .invoice-card {
       background: white;
       border-radius: 16px;
       border: 1px solid rgb(var(--ink-200));

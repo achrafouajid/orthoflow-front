@@ -205,7 +205,7 @@ import { AuthService } from '../../core/services/auth.service';
               </div>
 
               <!-- Action button -->
-              <button type="button" class="btn-primary w-full justify-center mt-4" (click)="triggerTreatmentAssign(toothId)">
+              <button type="button" class="btn btn-primary w-full justify-center mt-4" (click)="triggerTreatmentAssign(toothId)">
                 <span class="material-icons me-1">add</span>
                 Assign Treatment to #{{ toothId }}
               </button>

@@ -102,7 +102,7 @@ import { ToastService } from '../../../../core/services/toast.service';
             </div>
 
             <div class="sidebar-actions">
-              <button type="button" class="btn-primary full-width" (click)="saveInvoice()">
+              <button type="button" class="btn btn-primary full-width" (click)="saveInvoice()">
                 <span class="material-icons">save</span>
                 Create Invoice
               </button>

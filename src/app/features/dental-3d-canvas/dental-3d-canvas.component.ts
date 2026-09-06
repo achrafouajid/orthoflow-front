@@ -8,6 +8,7 @@ import { ToothState, ToothStatus } from '../../core/models/patient.model';
 import { FAMILY_PAINT, TOOTH_STATUS_GROUPS, toothStatusDefinition } from '../../core/clinical/tooth-status';
 import { DentalChartService } from '../../core/services/dental-chart.service';
 import { DentalAuditLogComponent } from './components/dental-audit-log.component';
+import { ToothCloseupViewerComponent } from './components/tooth-closeup-viewer.component';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -18,7 +19,8 @@ import { AuthService } from '../../core/services/auth.service';
     FormsModule,
     TranslateModule,
     ThreeDentalViewerComponent,
-    DentalAuditLogComponent
+    DentalAuditLogComponent,
+    ToothCloseupViewerComponent
   ],
   template: `
     <div class="canvas-3d-wrapper">
@@ -54,8 +56,45 @@ import { AuthService } from '../../core/services/auth.service';
       <!-- Main Layout -->
       <div class="main-layout-container">
         <!-- 3D Views Grid/Panel -->
-        <div class="views-section" [class.single-view]="gridMode() === 'single'">
-          @if (gridMode() === 'grid') {
+        <div class="views-section" [class.single-view]="gridMode() === 'single' || mainMode() === 'tooth'">
+          @if (mainMode() === 'tooth' && selectedTooth()) {
+            <!-- Single-tooth view: takes over the main stage, arch is one click away -->
+            <div class="focused-view-container">
+              <header class="quadrant-header">
+                <span class="quadrant-title">
+                  <span class="material-icons text-xs me-1">view_in_ar</span>
+                  Dent {{ selectedTooth() }} — {{ getToothName(selectedTooth()!) }}
+                </span>
+                <div class="quadrant-actions">
+                  <button type="button" class="icon-btn-sm" aria-label="Retour à l'arcade" (click)="backToArch()">
+                    <span class="material-icons" aria-hidden="true">arrow_back</span>
+                  </button>
+                </div>
+              </header>
+              <div class="focused-view-body tooth-stage">
+                <app-tooth-closeup-viewer [fdi]="selectedTooth()" [mode]="toothViewMode()" />
+
+                <!-- Representation switch sits on the view it controls -->
+                <div class="tooth-view-switch" role="group" aria-label="Représentation de la dent">
+                  <button type="button"
+                    [class.active]="toothViewMode() === 'surface'"
+                    [attr.aria-pressed]="toothViewMode() === 'surface'"
+                    (click)="toothViewMode.set('surface')">Surface</button>
+                  <button type="button"
+                    [class.active]="toothViewMode() === 'root'"
+                    [attr.aria-pressed]="toothViewMode() === 'root'"
+                    (click)="toothViewMode.set('root')">Racine</button>
+                </div>
+
+                @if (toothViewMode() === 'root') {
+                  <p class="schematic-note">
+                    Vue radiculaire schématique — canal reconstruit à partir de la
+                    morphologie externe, pas de l'anatomie endodontique du patient.
+                  </p>
+                }
+              </div>
+            </div>
+          } @else if (gridMode() === 'grid') {
             <div class="grid-2x2">
               @for (v of views; track v.type) {
                 <div class="view-quadrant" [class.focused]="focusedView() === v.type">
@@ -143,7 +182,7 @@ import { AuthService } from '../../core/services/auth.service';
                 <span class="tooth-fdi-badge">#{{ toothId }}</span>
                 <h3>Tooth Details</h3>
               </div>
-              <button type="button" class="close-btn" aria-label="Close tooth details" (click)="selectedTooth.set(null)">
+              <button type="button" class="close-btn" aria-label="Close tooth details" (click)="closeToothPanel()">
                 <span class="material-icons" aria-hidden="true">close</span>
               </button>
             </header>
@@ -211,9 +250,15 @@ import { AuthService } from '../../core/services/auth.service';
               </button>
             </div>
           } @else {
-            <div class="panel-empty-state">
-              <span class="material-icons large text-slate-300">touch_app</span>
-              <p>Click any tooth inside a 3D viewport to inspect properties or update status.</p>
+            <!-- Idle: the panel is the patient's working surface, not a
+                 placeholder. The host projects what belongs here (the
+                 treatment list); the hint stays as a one-line affordance. -->
+            <div class="panel-idle">
+              <p class="panel-idle-hint">
+                <span class="material-icons" aria-hidden="true">touch_app</span>
+                Cliquez une dent dans la vue 3D pour la détailler.
+              </p>
+              <ng-content select="[canvasIdlePanel]"></ng-content>
             </div>
           }
         </div>
@@ -247,6 +292,10 @@ export class Dental3DCanvasComponent implements OnInit {
   focusedView = signal<ViewType>('frontal');
 
   selectedTooth = signal<string | null>(null);
+
+  /** The main stage shows either the whole arch or one selected tooth. */
+  mainMode = signal<'arch' | 'tooth'>('arch');
+  toothViewMode = signal<'surface' | 'root'>('surface');
   hoveredTooth = signal<string | null>(null);
 
   currentToothNotes = '';
@@ -301,8 +350,27 @@ export class Dental3DCanvasComponent implements OnInit {
     this.selectedTooth.set(toothId);
     this.toothSelected.emit(toothId);
 
+    // Clicking a tooth in the arch hands the main stage over to that tooth.
+    // Always open on the surface: the root view is a schematic, and it should
+    // be something the user asks for rather than the default they land on.
+    this.toothViewMode.set('surface');
+    this.mainMode.set('tooth');
+
     const activeState = this.teethStates()[view][toothId];
     this.currentToothNotes = activeState?.notes || '';
+  }
+
+  /** Return the main stage to the arch, keeping the tooth selected so the
+   *  side panel still shows what the user was working on. */
+  backToArch() {
+    this.mainMode.set('arch');
+  }
+
+  /** Dismissing the panel drops the selection, so the stage must not be left
+   *  showing a tooth that is no longer selected. */
+  closeToothPanel() {
+    this.selectedTooth.set(null);
+    this.mainMode.set('arch');
   }
 
   onToothHover(toothId: string | null) {

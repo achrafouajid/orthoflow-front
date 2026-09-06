@@ -10,6 +10,7 @@ import {
   OnDestroy,
   SimpleChanges,
   NgZone,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as THREE from 'three';
@@ -37,14 +38,14 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
     <div class="viewer-container" #container>
       <div *ngIf="lazy && !isLazyLoaded" class="lazy-overlay" (mouseenter)="loadLazy()" (click)="loadLazy()">
         <span class="material-icons text-3xl text-ortho-sky mb-2">three_d_rotation</span>
-        <span class="text-xs font-semibold text-slate-300">Click or Hover to Load 3D View</span>
+        <span class="text-xs font-semibold text-slate-600">Click or Hover to Load 3D View</span>
       </div>
       <div *ngIf="loading && (!lazy || isLazyLoaded)" class="loading-overlay">
         <div class="spinner"></div>
         <span>Loading 3D Anatomy...</span>
       </div>
       <div *ngIf="!loading && mappingFailed" class="loading-overlay" role="alert">
-        <span class="material-icons text-3xl text-amber-400 mb-2">warning</span>
+        <span class="material-icons text-3xl text-amber-600 mb-2">warning</span>
         <span>3D model could not be mapped to FDI notation; use the 2D chart.</span>
       </div>
       <div class="canvas-wrapper" #canvasHolder></div>
@@ -56,10 +57,13 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
       width: 100%;
       height: 100%;
       min-height: 250px;
-      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      /* White ground. The faint vignette at the edges is deliberate: sound
+         teeth render in near-white enamel (#f8fafc), so on a perfectly flat
+         white field their silhouettes would wash out. */
+      background: radial-gradient(circle at center, #ffffff 0%, #ffffff 55%, #eef1f5 100%);
       border-radius: 12px;
       overflow: hidden;
-      border: 1px solid #334155;
+      border: 1px solid #e2e8f0;
     }
     .canvas-wrapper {
       width: 100%;
@@ -71,7 +75,7 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(15, 23, 42, 0.85);
+      background: rgba(255, 255, 255, 0.9);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -88,7 +92,7 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(15, 23, 42, 0.75);
+      background: rgba(255, 255, 255, 0.82);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -99,12 +103,12 @@ export function resolveArchFdiSequence(groupCount: number, fdiSequence: string[]
       backdrop-filter: blur(2px);
     }
     .lazy-overlay:hover {
-      background: rgba(15, 23, 42, 0.5);
+      background: rgba(255, 255, 255, 0.6);
     }
     .spinner {
       width: 24px;
       height: 24px;
-      border: 2px solid #334155;
+      border: 2px solid #cbd5e1;
       border-top-color: #03045e;
       border-radius: 50%;
       animation: spin 1s linear infinite;
@@ -157,7 +161,11 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
     if (!this.renderingPaused) this.animate();
   };
 
-  constructor(private ngZone: NgZone) {}
+  // This app runs zoneless (no zone.js dependency; Angular 21 defaults to
+  // zoneless change detection). NgZone.run() therefore does NOT schedule a
+  // re-render, so any template-bound state mutated from an async Three.js
+  // callback has to be reported with markForCheck().
+  constructor(private ngZone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     if (!this.lazy) {
@@ -354,18 +362,35 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
           }
         });
 
+        // The FDI mapping measures world-space bounding boxes, but setting
+        // scale/position above only writes the local transform — child world
+        // matrices are not refreshed until the first render(). Without this,
+        // mapping ran against the raw model coordinates: every tooth read as
+        // above Y=0 (0 lower arch) and the 0.3-unit X grouping threshold,
+        // which assumes the 10-unit normalised scale, merged 33 meshes into
+        // 7 groups. Mapping then failed its 16+16 check and disabled the 3D
+        // chart entirely.
+        model.updateMatrixWorld(true);
+
         this.mapTeethMeshesByPositions(model);
 
-        this.loading = false;
         this.applyColors();
         this.applyHighlight();
+        // loadModel() runs inside runOutsideAngular, so this callback resolves
+        // outside the zone. `loading` and `mappingFailed` are both bound in the
+        // template: flipping them here without re-entering the zone left the
+        // "Loading 3D Anatomy…" overlay covering a fully rendered model until
+        // some unrelated event happened to trigger change detection.
+        this.loading = false;
+        this.cdr.markForCheck();
       },
       (error) => {
         console.warn('Failed to load 3D GLTF model. Rendering high-fidelity procedural arch instead.', error);
         this.generateProceduralArch();
-        this.loading = false;
         this.applyColors();
         this.applyHighlight();
+        this.loading = false;
+        this.cdr.markForCheck();
       }
     );
   }
@@ -439,6 +464,14 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
       if (size.x > 4.0 || size.z > 4.0) {
         return false;
       }
+
+      // Degenerate slivers are modelling artefacts, not teeth. The bundled
+      // permanent_dentition model carries one (a 0.04-unit duplicate of the
+      // upper right first molar) which otherwise counts as a 17th upper
+      // "tooth" and fails the 16+16 check.
+      if (Math.max(size.x, size.y, size.z) < 0.15) {
+        return false;
+      }
       return true;
     });
 
@@ -466,6 +499,13 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
       return center.x;
     };
 
+    const getZWorld = (obj: THREE.Object3D) => {
+      const box = getMeshBox(obj);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      return center.z;
+    };
+
     // Sort from left of screen to right of screen
     upperMeshes.sort((a, b) => getXWorld(a) - getXWorld(b));
     lowerMeshes.sort((a, b) => getXWorld(a) - getXWorld(b));
@@ -478,7 +518,14 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
           groups.push([mesh]);
         } else {
           const lastGroup = groups[groups.length - 1];
-          if (Math.abs(getXWorld(mesh) - getXWorld(lastGroup[0])) < 0.3) {
+          // Distance in the occlusal (XZ) plane, not X alone. An arch is a
+          // curve: the second and third molars sit BEHIND each other, ~1.1
+          // apart in Z but only ~0.1 apart in X. Comparing X alone merged
+          // those distinct teeth into one group, so each arch came up short
+          // of 16 and the whole chart was disabled.
+          const dx = getXWorld(mesh) - getXWorld(lastGroup[0]);
+          const dz = getZWorld(mesh) - getZWorld(lastGroup[0]);
+          if (Math.hypot(dx, dz) < 0.3) {
             lastGroup.push(mesh);
           } else {
             groups.push([mesh]);

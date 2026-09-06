@@ -265,6 +265,10 @@ export class PatientListComponent {
   }
 
   navigateToPatient(patientId: string): void {
-    this.router.navigate([patientId]);
+    // Router.navigate() resolves a relative array against the root route,
+    // not the current one (unlike routerLink) — without the leading segment
+    // this silently missed every route and fell through to the wildcard
+    // redirect to '/', landing on the dashboard instead of the dossier.
+    this.router.navigate(['/patients', patientId]);
   }
 }

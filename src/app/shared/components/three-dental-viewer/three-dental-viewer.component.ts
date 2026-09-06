@@ -354,6 +354,16 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
           }
         });
 
+        // The FDI mapping measures world-space bounding boxes, but setting
+        // scale/position above only writes the local transform — child world
+        // matrices are not refreshed until the first render(). Without this,
+        // mapping ran against the raw model coordinates: every tooth read as
+        // above Y=0 (0 lower arch) and the 0.3-unit X grouping threshold,
+        // which assumes the 10-unit normalised scale, merged 33 meshes into
+        // 7 groups. Mapping then failed its 16+16 check and disabled the 3D
+        // chart entirely.
+        model.updateMatrixWorld(true);
+
         this.mapTeethMeshesByPositions(model);
 
         this.loading = false;
@@ -439,6 +449,14 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
       if (size.x > 4.0 || size.z > 4.0) {
         return false;
       }
+
+      // Degenerate slivers are modelling artefacts, not teeth. The bundled
+      // permanent_dentition model carries one (a 0.04-unit duplicate of the
+      // upper right first molar) which otherwise counts as a 17th upper
+      // "tooth" and fails the 16+16 check.
+      if (Math.max(size.x, size.y, size.z) < 0.15) {
+        return false;
+      }
       return true;
     });
 
@@ -466,6 +484,13 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
       return center.x;
     };
 
+    const getZWorld = (obj: THREE.Object3D) => {
+      const box = getMeshBox(obj);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      return center.z;
+    };
+
     // Sort from left of screen to right of screen
     upperMeshes.sort((a, b) => getXWorld(a) - getXWorld(b));
     lowerMeshes.sort((a, b) => getXWorld(a) - getXWorld(b));
@@ -478,7 +503,14 @@ export class ThreeDentalViewerComponent implements OnInit, OnChanges, OnDestroy 
           groups.push([mesh]);
         } else {
           const lastGroup = groups[groups.length - 1];
-          if (Math.abs(getXWorld(mesh) - getXWorld(lastGroup[0])) < 0.3) {
+          // Distance in the occlusal (XZ) plane, not X alone. An arch is a
+          // curve: the second and third molars sit BEHIND each other, ~1.1
+          // apart in Z but only ~0.1 apart in X. Comparing X alone merged
+          // those distinct teeth into one group, so each arch came up short
+          // of 16 and the whole chart was disabled.
+          const dx = getXWorld(mesh) - getXWorld(lastGroup[0]);
+          const dz = getZWorld(mesh) - getZWorld(lastGroup[0]);
+          if (Math.hypot(dx, dz) < 0.3) {
             lastGroup.push(mesh);
           } else {
             groups.push([mesh]);

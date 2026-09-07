@@ -177,3 +177,24 @@ export interface FindingEntity {
   severity: Severity | null;
   note?: string;
 }
+
+/**
+ * Reads an entity value that the rest of the system treats as a string.
+ *
+ * The server canonicalises `fdi` when it parses a model's JSON, but entity
+ * maps reach the browser from three places — the on-device grammar, the LLM
+ * fallback, and an audit row read back from the database — and a model will
+ * happily emit `"fdi": 16` as a number. Every consumer that tested
+ * `typeof === 'string'` silently skipped those, so a finding would save
+ * correctly and then vanish from the review page's tooth chart and refuse to
+ * be removed by voice. One tolerant reader is cheaper than remembering.
+ */
+export function entityString(
+  entities: Record<string, unknown> | undefined,
+  key: string,
+): string | null {
+  const value = entities?.[key];
+  if (typeof value === 'string') return value.trim() || null;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return null;
+}

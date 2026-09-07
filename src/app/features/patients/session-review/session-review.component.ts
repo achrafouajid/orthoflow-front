@@ -12,6 +12,7 @@ import { ScheduleService } from '../../../core/services/schedule.service';
 import { PatientTreatmentService } from '../../../core/services/patient-treatment.service';
 import { ClinicalRecordService } from '../../../core/services/clinical-record.service';
 import { InvoiceService } from '../../billing/services/invoice.service';
+import { entityString } from '../../../core/voice/voice-intent.model';
 import { findingLabel } from '../../../core/voice/clinical-lexicon';
 import { describeFdi } from '../../../core/voice/tooth-lexicon';
 
@@ -322,7 +323,7 @@ export class SessionReviewComponent {
     const byTooth = new Map<string, { fdi: string; description: string; labels: string[] }>();
     for (const entry of this.included()) {
       const entities = entry.entities as Record<string, unknown>;
-      const fdi = typeof entities['fdi'] === 'string' ? entities['fdi'] : null;
+      const fdi = entityString(entities, 'fdi');
       if (!fdi) continue;
 
       const row = byTooth.get(fdi) ?? { fdi, description: describeFdi(fdi), labels: [] };

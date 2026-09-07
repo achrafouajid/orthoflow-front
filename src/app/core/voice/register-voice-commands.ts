@@ -14,7 +14,7 @@ import { VoiceOrchestratorService } from './voice-orchestrator.service';
 import { describeFdi } from './tooth-lexicon';
 import { findingLabel } from './clinical-lexicon';
 import { WAKE_WORD } from './voice-wake';
-import { FindingEntity, VoiceCommand, VoiceCommandResult, VoiceContextSnapshot } from './voice-intent.model';
+import { FindingEntity, VoiceCommand, VoiceCommandResult, VoiceContextSnapshot, entityString } from './voice-intent.model';
 
 /**
  * The command set. This is the whole vocabulary of things voice can do —
@@ -153,7 +153,7 @@ export class VoiceCommandsService {
           const removed = await this.orchestrator.discardBufferedMatching(
             entry => {
               const entities = entry.entities as Record<string, unknown>;
-              const entryFdi = typeof entities['fdi'] === 'string' ? entities['fdi'] : null;
+              const entryFdi = entityString(entities, 'fdi');
               const codes = Array.isArray(entities['findingCodes'])
                 ? (entities['findingCodes'] as unknown[]).map(String)
                 : typeof entities['findingCode'] === 'string' ? [entities['findingCode'] as string] : [];
@@ -163,8 +163,7 @@ export class VoiceCommandsService {
             },
             matches => {
               const teeth = [...new Set(matches.map(match => {
-                const entities = match.entities as Record<string, unknown>;
-                return typeof entities['fdi'] === 'string' ? entities['fdi'] : '?';
+                return entityString(match.entities as Record<string, unknown>, 'fdi') ?? '?';
               }))];
               return `I have that on ${teeth.length} teeth: ${teeth.join(', ')}. Which one?`;
             },

@@ -21,6 +21,7 @@ import {
   VoiceContextSnapshot,
   VoiceIntent,
   VoiceResolution,
+  entityString,
 } from './voice-intent.model';
 
 /**
@@ -570,7 +571,7 @@ export class VoiceOrchestratorService {
 
     // Highlight before the write, not after — the doctor's confirmation is
     // only meaningful if they can see which tooth it applies to first.
-    const fdi = typeof intent.entities['fdi'] === 'string' ? intent.entities['fdi'] as string : null;
+    const fdi = entityString(intent.entities, 'fdi');
     if (fdi) this.highlightSignal.set(fdi);
 
     const combinedConfidence = intent.confidence * recognitionConfidence;

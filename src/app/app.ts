@@ -4,8 +4,6 @@ import { LanguageService } from './core/services/language.service';
 import { ToastContainerComponent } from './shared/components/toast/toast-container.component';
 import { ConfirmDialogComponent } from './shared/components/confirm-dialog/confirm-dialog.component';
 import { CommandPaletteComponent } from './shared/components/command-palette/command-palette.component';
-import { VoiceHudComponent } from './shared/components/voice/voice-hud.component';
-import { VoiceSessionSummaryComponent } from './shared/components/voice/voice-session-summary.component';
 import { CommandRegistryService } from './core/services/command-registry.service';
 import { registerAppCommands } from './core/services/register-app-commands';
 import { VoiceCommandsService } from './core/voice/register-voice-commands';
@@ -21,15 +19,17 @@ import { assertLexiconMatches } from './core/voice/clinical-lexicon';
     ToastContainerComponent,
     ConfirmDialogComponent,
     CommandPaletteComponent,
-    VoiceHudComponent,
-    VoiceSessionSummaryComponent,
   ],
+  // The voice HUD is deliberately *not* here. It used to be mounted at the
+  // app root, which put a listening indicator and a live microphone on every
+  // screen in the application. Dictation only means anything inside a patient
+  // dossier — that is the only context in which "add a finding to sixteen"
+  // has a referent — so the HUD lives there now, and the session cannot be
+  // started from anywhere else.
   template: `<router-outlet />
     <app-toast-container />
     <app-confirm-dialog />
-    <app-command-palette />
-    <app-voice-hud />
-    <app-voice-session-summary />`,
+    <app-command-palette />`,
 })
 export class App {
   private voiceCommands = inject(VoiceCommandsService);
@@ -65,10 +65,11 @@ export class App {
   }
 
   /**
-   * ⌘K opens the command palette; ⌘⇧V is the voice equivalent — a keyboard
-   * chord rather than a wake word, which is the push-to-talk trigger audit
-   * XII.4 §1 asks for. Enter and Escape answer a pending confirmation so a
-   * clinical write can be resolved without reaching for the mouse.
+   * ⌘K opens the command palette; ⌘⇧V toggles one-shot listening, which is
+   * still useful outside an examination (and on a machine where the dentist
+   * is at the keyboard). During an examination the wake word is the trigger,
+   * because their hands are not free. Enter and Escape answer a pending
+   * confirmation without reaching for the mouse.
    */
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {

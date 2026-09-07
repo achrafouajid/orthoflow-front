@@ -56,6 +56,14 @@ export const routes: Routes = [
           {
             path: ':id/edit',
             loadComponent: () => import('./features/patients/patient-registration/patient-registration.component').then(m => m.PatientRegistrationComponent),
+          },
+          {
+            // Where a dictated examination is corrected and committed. A route
+            // rather than a modal because this *is* the write step: it has to
+            // survive a refresh, and a stray backdrop click must not be able
+            // to discard a consultation.
+            path: ':id/session/:sessionId/review',
+            loadComponent: () => import('./features/patients/session-review/session-review.component').then(m => m.SessionReviewComponent),
           }
         ]
       },

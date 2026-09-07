@@ -115,7 +115,7 @@ export const FINDINGS: FindingDefinition[] = [
   F('recurrent_caries', 'CONDITION', 'Recurrent caries',
     /\brecurrent\s+car\w+/iu, /\bsecondary\s+car\w+/iu,
     /\bcar\w+\s+(?:underneath|under\s+(?:the\s+)?(?:crown|filling|restoration))/iu,
-    /\bcarie\s+(?:r[ée]cidivante|secondaire|sous\s+(?:la\s+)?(?:couronne|obturation))/iu),
+    /\bcarie\s+(?:r[ée]cidivante|r[ée]currente|secondaire|sous\s+(?:la\s+)?(?:couronne|obturation))/iu),
 
   F('deep_caries', 'CONDITION', 'Deep caries',
     /\bdeep\s+(?:car\w+|cavit\w+|decay)/iu, /\bcarie\s+profonde/iu),

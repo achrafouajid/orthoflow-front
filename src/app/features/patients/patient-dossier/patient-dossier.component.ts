@@ -22,12 +22,14 @@ import { Treatment, StockItem } from '../../../core/models/stock.model';
 import { ClinicalRecordService } from '../../../core/services/clinical-record.service';
 import { VoiceContextService } from '../../../core/voice/voice-context.service';
 import { VoiceOrchestratorService } from '../../../core/voice/voice-orchestrator.service';
+import { VoiceSessionService } from '../../../core/voice/voice-session.service';
+import { VoiceHudComponent } from '../../../shared/components/voice/voice-hud.component';
 import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clinical-record.model';
 
 @Component({
   selector: 'app-patient-dossier',
   standalone: true,
-  imports: [CommonModule, RouterModule, DentalChartComponent, Dental3DCanvasComponent, TranslateModule, FormsModule],
+  imports: [CommonModule, RouterModule, DentalChartComponent, Dental3DCanvasComponent, TranslateModule, FormsModule, VoiceHudComponent],
   template: `
     <div class="dossier-container">
       @if (patientService.currentPatient(); as patient) {
@@ -42,6 +44,21 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
             <span class="status-badge active">{{ 'PATIENTS.DOSSIER.STATUS_' + patient.status | translate }}</span>
           </div>
           <div class="header-actions no-print">
+            <!-- Dictation starts here and nowhere else: a session only means
+                 something in the context of one patient's dossier. -->
+            @if (voiceSession.isActive()) {
+              <button type="button" class="btn btn-recording" (click)="endSession()"
+                      [disabled]="voiceSession.busy()">
+                <span class="material-icons" aria-hidden="true">stop_circle</span>
+                {{ voiceSession.busy() ? 'Ending…' : 'End session' }}
+              </button>
+            } @else {
+              <button type="button" class="btn btn-record" (click)="startSession()"
+                      [disabled]="voiceSession.busy()">
+                <span class="material-icons" aria-hidden="true">mic</span>
+                Record
+              </button>
+            }
             <button type="button" class="btn btn-secondary" (click)="onPrint()">
               <span class="material-icons">print</span>
               {{ 'COMMON.PRINT' | translate }}
@@ -722,6 +739,12 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
           <p>{{ 'COMMON.LOADING' | translate }}</p>
         </div>
       }
+
+      <!-- Scoped to the dossier rather than mounted at the app root. A voice
+           command like "sixteen, recurrent caries" only has a referent when a
+           patient's record is open; showing a live microphone on the billing
+           screen invited exactly the ambiguity this rework removes. -->
+      <app-voice-hud />
     </div>
   `,
   styles: [`
@@ -811,6 +834,20 @@ import { MedicalHistoryCategory, NoteCategory } from '../../../core/models/clini
       width: 1px;
       height: 24px;
       background: rgb(var(--ink-200));
+    }
+
+    .btn-record, .btn-recording {
+      display: inline-flex; align-items: center; gap: .4rem;
+    }
+    .btn-record { background: var(--primary, #2563eb); color: #fff; }
+    /* Unmissable while the microphone is live — the dentist is not looking at
+       the screen, so the one person who can see this state is whoever else is
+       in the room. */
+    .btn-recording { background: #c62828; color: #fff; }
+    .btn-recording .material-icons { animation: recording-pulse 1.6s ease-in-out infinite; }
+    @keyframes recording-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+    @media (prefers-reduced-motion: reduce) {
+      .btn-recording .material-icons { animation: none; }
     }
 
     .dossier-tabs {
@@ -1639,6 +1676,7 @@ export class PatientDossierComponent implements OnInit, OnDestroy {
   private scheduleService = inject(ScheduleService);
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService);
+  voiceSession = inject(VoiceSessionService);
   private commandRegistry = inject(CommandRegistryService);
   clinicalRecordService = inject(ClinicalRecordService);
   private voiceContext = inject(VoiceContextService);
@@ -2202,5 +2240,39 @@ export class PatientDossierComponent implements OnInit, OnDestroy {
         this.toast.error('Could not delete the patient record. Please try again.');
       }
     });
+  }
+
+  /**
+   * Begins a dictated examination for the patient whose dossier is open.
+   *
+   * If an earlier examination for this same patient was interrupted — a closed
+   * tab, a flat battery — it is offered back instead of being silently
+   * replaced. Resuming is scoped to this patient on purpose: offering Ahmed's
+   * half-finished examination while Fatima's chart is on screen is how
+   * findings end up on the wrong record.
+   */
+  async startSession(): Promise<void> {
+    const patient = this.patientService.currentPatient();
+    if (!patient) return;
+
+    const resumable = await this.voiceSession.resumeIfAvailable(patient.id);
+    if (resumable) {
+      const resume = await this.confirmDialog.confirm(
+        'An unfinished examination for this patient was found. Resume it?',
+        { confirmLabel: 'Resume' },
+      );
+      if (resume) {
+        await this.voice.startExaminationMode();
+        return;
+      }
+    }
+
+    await this.voiceSession.start();
+    await this.voice.startExaminationMode();
+  }
+
+  /** Ends dictation and navigates to review. Nothing is written here. */
+  async endSession(): Promise<void> {
+    await this.voiceSession.end();
   }
 }

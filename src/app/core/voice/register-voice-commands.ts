@@ -13,6 +13,7 @@ import { VoiceSessionService } from './voice-session.service';
 import { VoiceOrchestratorService } from './voice-orchestrator.service';
 import { describeFdi } from './tooth-lexicon';
 import { findingLabel } from './clinical-lexicon';
+import { WAKE_WORD } from './voice-wake';
 import { FindingEntity, VoiceCommand, VoiceCommandResult, VoiceContextSnapshot } from './voice-intent.model';
 
 /**
@@ -77,28 +78,27 @@ export class VoiceCommandsService {
         preview: () => 'Start a dictated examination',
         execute: async () => {
           await this.sessions.start();
-          this.orchestrator.startExaminationMode();
+          await this.orchestrator.startExaminationMode();
           return {
             ok: true,
-            message: 'Examination started. I\'m listening — dictate your findings.',
+            message: `Examination started. Say "${WAKE_WORD}" before a command.`,
           };
         },
       },
       {
         id: 'voice.session.end',
-        description: 'End the dictated examination and show the consultation summary for review',
+        description: 'End the dictated examination and open the review page',
         risk: 'SAFE',
         args: {},
-        examples: ['end examination', 'finish the consultation'],
-        preview: () => 'End the examination and review the summary',
+        examples: ['end session', 'stop', 'finish the consultation'],
+        preview: () => 'End the examination and review it',
         execute: async () => {
-          const summary = await this.sessions.end();
-          this.orchestrator.stopListening();
+          // Nothing has been written yet — everything dictated is staged and
+          // reaches the record only when the dentist saves at review.
+          await this.sessions.end();
           return {
             ok: true,
-            message: summary
-              ? `Examination ended. ${this.sessions.spokenSummary(summary)}`
-              : 'Examination ended.',
+            message: 'Examination ended. Review it on screen before saving.',
           };
         },
       },
@@ -115,6 +115,63 @@ export class VoiceCommandsService {
             return { ok: true, message: 'No examination is running. Say "start examination" to begin one.' };
           }
           return { ok: true, message: this.sessions.spokenSummary(summary) };
+        },
+      },
+      {
+        /**
+         * "Enlève la carie sur la seize" — removing a staged finding by naming
+         * it, rather than by how recently it was said.
+         *
+         * One-step undo is not enough during a fast run: by the time the
+         * dentist notices the mistake they are two teeth further on, and their
+         * hands are not free to fix it on screen. Nothing has been written to
+         * the record at this point, so this edits the buffer.
+         *
+         * An ambiguous reference always asks. Removing the wrong finding is
+         * invisible at review — what remains reads as an ordinary, correctly
+         * spelled record, and there is nothing to notice about the one that
+         * went missing.
+         */
+        id: 'voice.correction.remove',
+        description: 'Remove a finding recorded earlier in this examination, by naming it',
+        risk: 'SAFE',
+        requiresPatient: true,
+        args: { fdi: 'FDI tooth code, optional', findingCode: 'finding code, optional' },
+        examples: ['remove the caries on sixteen', 'enlève la carie sur la seize'],
+        preview: (entities) => {
+          const fdi = entities['fdi'] ? ` on ${entities['fdi']}` : '';
+          const code = entities['findingCode'] ? findingLabel(String(entities['findingCode'])) : 'that finding';
+          return `Remove ${code}${fdi} from this examination`;
+        },
+        execute: async (entities) => {
+          const fdi = entities['fdi'] ? String(entities['fdi']) : null;
+          const code = entities['findingCode'] ? String(entities['findingCode']) : null;
+          if (!fdi && !code) {
+            return { ok: false, message: 'Say which finding to remove, and on which tooth.' };
+          }
+
+          const removed = await this.orchestrator.discardBufferedMatching(
+            entry => {
+              const entities = entry.entities as Record<string, unknown>;
+              const entryFdi = typeof entities['fdi'] === 'string' ? entities['fdi'] : null;
+              const codes = Array.isArray(entities['findingCodes'])
+                ? (entities['findingCodes'] as unknown[]).map(String)
+                : typeof entities['findingCode'] === 'string' ? [entities['findingCode'] as string] : [];
+              if (fdi && entryFdi !== fdi) return false;
+              if (code && !codes.includes(code)) return false;
+              return true;
+            },
+            matches => {
+              const teeth = [...new Set(matches.map(match => {
+                const entities = match.entities as Record<string, unknown>;
+                return typeof entities['fdi'] === 'string' ? entities['fdi'] : '?';
+              }))];
+              return `I have that on ${teeth.length} teeth: ${teeth.join(', ')}. Which one?`;
+            },
+          );
+          return removed
+            ? { ok: true, message: 'Removed from this examination.' }
+            : { ok: false, message: 'Nothing removed.' };
         },
       },
       {

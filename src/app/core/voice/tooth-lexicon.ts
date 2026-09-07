@@ -92,6 +92,16 @@ const ORDINALS: Record<string, number> = {
 
 const ALL_UNITS: Record<string, number> = { ...UNITS_EN, ...UNITS_FR, ...UNITS_AR };
 
+/**
+ * Every word that can name a number, in any of the three languages.
+ *
+ * Exported so the fuzzy matcher can refuse to touch them. Correcting "seize"
+ * to "seizure" — or, far worse, to "sept" — puts a finding on a different
+ * tooth, and nothing downstream would catch it: the record would read as a
+ * perfectly ordinary finding, correctly spelled, on the wrong tooth.
+ */
+export const NUMBER_WORDS: ReadonlySet<string> = new Set(Object.keys(ALL_UNITS));
+
 // ── Positional vocabulary ───────────────────────────────────────────────
 
 /** Tooth-type words → position in the permanent dentition. */
